@@ -91,4 +91,4 @@ function updateChart(newPrice) {
 // --- Démarrage ---
 initChart();
 refreshPrix();
-setInterval(refreshPrix, 15000); // rafraîchit toutes les 15 secondes
+setInterval(refreshPrix, 60000); // rafraîchit toutes les 15 secondes
