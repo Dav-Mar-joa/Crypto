@@ -120,7 +120,7 @@ async function updateBitcoinPrice() {
     if (oldPrice) {
       variation = ((newPrice - oldPrice) / oldPrice * 100).toFixed(2);
     }
-
+    console.log(variation);   
     // --- Mettre à jour le cache ---
     cachedPrice = newPrice;
     lastUpdate = now;
