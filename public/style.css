@@ -1,0 +1,104 @@
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0d1117;
+  color: #e6edf3;
+  margin: 0;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Titre façon tableau de bord financier */
+h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #58a6ff;
+}
+
+/* Bloc du prix comme sur TradingView */
+#prix {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin: 1rem 0;
+  color: #00ff95;
+  text-shadow: 0 0 12px rgba(0, 255, 149, 0.3);
+  transition: 0.3s ease-in-out;
+}
+
+/* Effet changement de prix (animé par JS si tu veux plus tard) */
+#prix.updated {
+  transform: scale(1.05);
+  text-shadow: 0 0 20px rgba(0, 255, 149, 0.6);
+}
+
+/* Dernière mise à jour */
+#maj {
+  font-size: 1rem;
+  color: #8b949e;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+
+#variation {
+  font-size: 1rem;
+  color: #d53110;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+
+#variation.positive {
+  color: #00ff95; /* vert */
+}
+
+#variation.negative {
+  color: #ff4d4d; /* rouge */
+}
+
+/* Cadre type panneau de trading */
+.container {
+  background: #161b22;
+  padding: 25px 35px;
+  border-radius: 16px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.3);
+  text-align: center;
+  border: 1px solid #21262d;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  h1 {
+    font-size: 2rem;
+  }
+  #prix {
+    font-size: 2.3rem;
+  }
+  .container {
+    width: 90%;
+    padding: 20px;
+  }
+}
+
+/* Graphique TradingView-like */
+#chart {
+  width: 100%;
+  max-width: 700px;
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* Conteneur graphique */
+.container {
+  background: #161b22;
+  padding: 25px 40px;
+  border-radius: 16px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.3);
+  text-align: center;
+  border: 1px solid #21262d;
+  width: 95%;
+  max-width: 850px;
+}
