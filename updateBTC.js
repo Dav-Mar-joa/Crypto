@@ -29,10 +29,23 @@ async function updateBitcoinPrice() {
   try {
     if (!db) await connectDB();
 
-    const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
-    const res = await axios.get(url);
+    // const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+    // const res = await axios.get(url);
 
-    const newPrice = res.data.bitcoin.usd;
+    // const newPrice = res.data.bitcoin.usd;
+    const url =
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true";
+
+  const res = await axios.get(url);
+
+  const newPrice     = res.data.bitcoin.usd;
+  const marketCap = res.data.bitcoin.usd_market_cap;
+  const volume    = res.data.bitcoin.usd_24h_vol;
+
+  console.log("Prix :", newPrice);
+  console.log("MarketCap :", marketCap);
+  console.log("Volume :", volume);
+
     const now = new Date();
 
     const collection = db.collection(process.env.MONGODB_COLLECTION);
@@ -48,7 +61,9 @@ async function updateBitcoinPrice() {
     await collection.insertOne({
       price: newPrice,
       updatedAt: now,
-      variation: variation
+      variation: variation,
+      marketCap: marketCap,
+      volume: volume
     });
 
     const nowFR = now.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });

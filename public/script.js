@@ -1,6 +1,25 @@
 let chart;
 let chartData = [];
 let chartLabels = [];
+let isVariationVisible = false;
+let yTitle = "Prix BTC/USD";
+
+// Listener du bouton toggle
+document.getElementById('button-toggle').addEventListener('click', async () => {
+  isVariationVisible = !isVariationVisible;
+
+  if (isVariationVisible) {
+    document.getElementById('button-toggle').textContent = "Price";
+    yTitle = "Variation %";
+    await loadHistory();
+  } else {
+    document.getElementById('button-toggle').textContent = "Variation";
+    yTitle = "Price BTC/USD";
+    await loadHistory();
+  }
+
+  initChart(); // On réinitialise le graphique avec le nouveau yTitle
+});
 
 // ======================
 // Initialisation du graphique
@@ -8,12 +27,14 @@ let chartLabels = [];
 function initChart() {
   const ctx = document.getElementById('chart');
 
+  if(chart) chart.destroy(); // On détruit l'ancien chart pour en recréer un nouveau
+
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartLabels,
       datasets: [{
-        label: "BTC/USD",
+        label: isVariationVisible ? "%" : "BTC/USD",
         data: chartData,
         borderWidth: 2,
         borderColor: "#00ff95",
@@ -29,11 +50,12 @@ function initChart() {
       },
       scales: {
         x: { title: { display: true, text: 'Heure' } },
-        y: { title: { display: true, text: 'Prix (USD)' } }
+        y: { title: { display: true, text: yTitle } }
       }
     }
   });
 }
+
 
 // ======================
 // Charger tout l'historique depuis MongoDB
@@ -56,7 +78,11 @@ async function loadHistory() {
       });
 
       chartLabels.push(dateFR);
-      chartData.push(entry.price);
+      if(!isVariationVisible)
+        chartData.push(entry.price);
+      else{
+        chartData.push(entry.variation);
+      }
     });
 
     chart.update();
@@ -106,7 +132,11 @@ async function refreshPrix() {
 
     // Mise à jour graphique
     chartLabels.push(timeFR);
-    chartData.push(data.price);
+    if(!isVariationVisible)
+      chartData.push(data.price);
+    else{
+      chartData.push(data.variation);
+    }
     chart.update();
 
   } catch (err) {

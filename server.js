@@ -54,7 +54,7 @@ app.get('/btc-price', async (req, res) => {
       variation = ((cachedPrice - lastTwo[1].price) / lastTwo[1].price * 100).toFixed(2);
     }
 
-    res.json({ price: cachedPrice, updatedAt: lastUpdate, variation });
+    res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume });
 
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur /btc-price" });
