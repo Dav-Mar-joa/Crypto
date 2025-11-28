@@ -11,20 +11,22 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
   <div class="container">
     <h1>Bitcoin (USD)</h1>
 
-    <p id="prix">Chargement...</p>
-    <p id="variation"></p>
-    <p id="maj"></p>
-    
+    <div class="btc-info">
+      <p id="prix" class="btc-prix">Chargement...</p>
+      <p id="variation" class="btc-variation"></p>
+      <p id="maj" class="btc-maj"></p>
+    </div>
 
     <canvas id="chart"></canvas>
   </div>
 
-  <script src="script.js"></script>
-    <script>
+  <!-- Script principal -->
+  <script src="script.js" type="module"></script>
+
+  <script>
     // --- Enregistrement du Service Worker ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {

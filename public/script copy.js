@@ -2,12 +2,9 @@ let chart;
 let chartData = [];
 let chartLabels = [];
 
-// ======================
 // Initialisation du graphique
-// ======================
 function initChart() {
   const ctx = document.getElementById('chart');
-
   chart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -35,51 +32,35 @@ function initChart() {
   });
 }
 
-// ======================
 // Charger tout l'historique depuis MongoDB
-// ======================
 async function loadHistory() {
   try {
     const res = await fetch('/btc-history');
     const data = await res.json();
 
-    chartLabels.length = 0;
-    chartData.length = 0;
-
-    data.forEach(entry => {
-      const date = new Date(entry.updatedAt);
-
-      // ← Fuseau Europe/Paris
-      const dateFR = date.toLocaleString("fr-FR", {
-        hour12: false,
-        timeZone: "Europe/Paris"
-      });
-
-      chartLabels.push(dateFR);
-      chartData.push(entry.price);
+    chartLabels = data.map(d => {
+      // Convertir la date en objet Date
+      const date = new Date(d.updatedAt);
+      return date.toLocaleString("fr-FR", { hour12: false });
     });
 
-    chart.update();
+    chartData = data.map(d => d.price);
 
+    chart.update();
   } catch (err) {
-    console.error("Erreur chargement historique :", err);
+    console.error("Erreur historique:", err);
   }
 }
 
-// ======================
-// Rafraîchir le prix actuel
-// ======================
+// Rafraîchir le prix actuel et l'ajouter au graphique
 async function refreshPrix() {
   try {
     const res = await fetch('/btc-price');
     const data = await res.json();
 
-    // Affichage prix
+    // Affichage du prix
     document.getElementById('prix').textContent =
-      `$${Number(data.price).toLocaleString("fr-FR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`;
+      `$${Number(data.price).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     // Variation
     const variationEl = document.getElementById('variation');
@@ -87,41 +68,32 @@ async function refreshPrix() {
       const sign = data.variation > 0 ? '+' : '';
       variationEl.textContent = `(${sign}${data.variation}%)`;
       variationEl.className = data.variation >= 0 ? 'positive' : 'negative';
+    } else {
+      variationEl.textContent = "(N/A)";
     }
 
-    // Dernière mise à jour en fuseau FR
+    // Date de mise à jour
     const date = new Date(data.updatedAt);
-
-    const timeFR = date.toLocaleTimeString("fr-FR", {
-      hour12: false,
-      timeZone: "Europe/Paris"
-    });
-
-    const dateFR = date.toLocaleDateString("fr-FR", {
-      timeZone: "Europe/Paris"
-    });
-
     document.getElementById('maj').textContent =
-      `Last update : ${timeFR} (${dateFR})`;
+      `Last update : ${date.toLocaleTimeString("fr-FR", { hour12: false })} (${date.toLocaleDateString("fr-FR")})`;
 
-    // Mise à jour graphique
-    chartLabels.push(timeFR);
+    // Ajouter au graphique
+    chartLabels.push(date.toLocaleTimeString("fr-FR"));
     chartData.push(data.price);
+
     chart.update();
 
   } catch (err) {
-    console.error("Erreur refresh :", err);
+    console.error("Erreur refresh:", err);
   }
 }
 
-// ======================
-// Lancement
-// ======================
+// 🚀 Démarrage
 (async () => {
   initChart();
-  await loadHistory();
-  await refreshPrix();
+  await loadHistory();   // charge tout l'historique
+  await refreshPrix();   // ajoute le prix actuel
 
-  // Mise à jour toutes les minutes
+  // Met à jour le prix toutes les minutes
   setInterval(refreshPrix, 60 * 1000);
 })();
