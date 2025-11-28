@@ -47,7 +47,8 @@ async function updateBitcoinPrice() {
     // Insérer dans MongoDB
     await collection.insertOne({
       price: newPrice,
-      updatedAt: now
+      updatedAt: now,
+      variation: variation
     });
 
     const nowFR = now.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
