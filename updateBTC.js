@@ -98,17 +98,18 @@ async function updateBitcoinPrice() {
     const db = await connectDB();
     const collection = db.collection(process.env.MONGODB_COLLECTION);
 
-    // Récupérer les derniers prix pour lissage
-    const lastEntries = await collection.find({ type: { $ne: "signalState" } })
-                                        .sort({ _id: -1 })
-                                        .limit(50)
-                                        .toArray();
-    priceHistory = lastEntries.map(e => e.price).reverse();
+    // Récupérer les derniers prix pour le lissage
+    const lastEntries = await collection.find({ type: "price" })
+                                       .sort({ _id: -1 })
+                                       .limit(50)
+                                       .toArray();
 
-    // Récupérer état précédent pour signal
+    priceHistory = lastEntries.length > 0 ? lastEntries.map(e => e.price).reverse() : [];
+
+    // Récupérer l'état du signal
     const signalState = await loadSignalState(collection);
 
-    // Récupérer prix actuel
+    // Récupérer le prix actuel depuis CoinGecko
     const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true";
     const res = await axios.get(url);
 
@@ -117,28 +118,28 @@ async function updateBitcoinPrice() {
     const volume = res.data.bitcoin.usd_24h_vol;
 
     // Calcul variation
-    const lastEntry = lastEntries[lastEntries.length - 1];
-    const variation = lastEntry ? ((newPrice - lastEntry.price) / lastEntry.price * 100).toFixed(2) : null;
+    const previousPrice = lastEntries.length > 0 ? lastEntries[lastEntries.length - 1].price : null;
+    const variation = previousPrice ? ((newPrice - previousPrice) / previousPrice * 100).toFixed(2) : null;
 
-    // Enregistrer prix dans DB
+    // Enregistrer le nouveau prix dans MongoDB
     await collection.insertOne({
       price: newPrice,
       updatedAt: new Date(),
       variation,
       marketCap,
       volume,
-      type: "price"  // pour distinguer du document signalState
+      type: "price"
     });
 
-    // Mise à jour historique pour lissage
+    // Mettre à jour l'historique et calculer le lissage
     priceHistory.push(newPrice);
     const smoothed = smoothPrice(priceHistory);
     const lastSmooth = smoothed[smoothed.length - 1];
 
-    // Calcul signal
+    // Calcul du signal
     const actionSignal = calculateTrendSignalSmoothed(lastSmooth, signalState);
 
-    // Sauvegarde état signal pour prochaines exécutions
+    // Sauvegarder l'état du signal pour la prochaine exécution
     await saveSignalState(collection, signalState);
 
     console.log(`Prix: $${newPrice} | Δ: ${variation}% | Signal: ${actionSignal}`);
@@ -150,7 +151,7 @@ async function updateBitcoinPrice() {
 }
 
 // ======================
-// Si lancé directement (cron)
+// Si exécuté directement (cron)
 // ======================
 if (require.main === module) {
   (async () => {
