@@ -4,6 +4,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { MongoClient } = require('mongodb');
+const regression = require ("regression");
 require('dotenv').config();
 
 const app = express();
@@ -43,6 +44,7 @@ app.get('/btc-price', async (req, res) => {
 
     const collection = db.collection(process.env.MONGODB_COLLECTION);
     const lastTwo = await collection.find().sort({ _id: -1 }).limit(2).toArray();
+    
 
     if (lastTwo.length === 0) return res.status(503).json({ error: "Pas de prix" });
 
@@ -53,6 +55,7 @@ app.get('/btc-price', async (req, res) => {
     if (lastTwo.length === 2) {
       variation = ((cachedPrice - lastTwo[1].price) / lastTwo[1].price * 100).toFixed(2);
     }
+    console.log("Prix servi :", cachedPrice, "Variation :", variation, "Date :", lastUpdate);
 
     res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume });
 

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://unpkg.com/regression@2.0.1/dist/regression.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="/manifest.json"/>
   <title>Prix du Bitcoin</title>
@@ -14,15 +15,37 @@
   <div class="container">
     <h1>Bitcoin (USD)</h1>
 
+    <div class="buttons-wrapper">
+      <!-- Variation / Price -->
+      <label class="toggle-line">
+        <input type="checkbox" id="check-variation" checked>
+        <button id="button-toggle" class="button-toggle">Variation</button>
+      </label>
+
+      <!-- Volume / Market Cap -->
+      <label class="toggle-line">
+        <input type="checkbox" id="check-volume" >
+        <button id="button-toggle2" class="button-toggle2">Volume</button>
+      </label>
+
+      
+
+      <!-- Price lissé -->
+      <label class="toggle-line">
+        <input type="checkbox" id="check-smooth">
+        Price smoothed
+      </label>
+      <label class="toggle-line">
+        <div id="signal" class=""></div>
+        
+    </div>
+
     <div class="btc-info">
       <p id="prix" class="btc-prix">Chargement...</p>
       <p id="variation" class="btc-variation"></p>
+      <canvas id="chart"></canvas> 
       <p id="maj" class="btc-maj"></p>
     </div>
-  <button id="button-toggle" class="button-toggle">Variation</button>
-      <canvas id="chart"></canvas> 
-
-    
   </div>
 
   <!-- Script principal -->

@@ -1,112 +1,70 @@
+// ======================
+//      DEPENDANCES
+// ======================
 const express = require('express');
-const axios = require('axios');
+const bodyParser = require('body-parser');
+const { MongoClient } = require('mongodb');
+const regression = require ("regression");
+require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-require('dotenv').config();
-
-const bodyParser = require('body-parser');
-const { MongoClient } = require('mongodb');
-
-// 🔥 Config MongoDB
-const connectionString = process.env.MONGODB_URI;
-const client = new MongoClient(connectionString);
-const dbName = process.env.MONGODB_DBNAME;
+// ======================
+//  MONGODB CONNECTION
+// ======================
+const client = new MongoClient(process.env.MONGODB_URI);
 let db;
 
-// Connexion MongoDB
 async function connectDB() {
   try {
     await client.connect();
-    db = client.db(dbName);
-    console.log('Connecté à MongoDB ✔');
+    db = client.db(process.env.MONGODB_DBNAME);
+    console.log("✔ Connecté à MongoDB");
   } catch (err) {
-    console.error('Erreur de connexion à MongoDB :', err);
+    console.error("❌ MongoDB erreur :", err);
     process.exit(1);
   }
 }
-connectDB();
 
-// Middleware
+// ======================
+//  MIDDLEWARE
+// ======================
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
-// Cache local
-let cachedPrice = null;
-let lastUpdate = null;
+// ======================
+//  ROUTES API
+// ======================
 
-// 🔥 Fonction de mise à jour du prix
-async function updateBitcoinPrice() {
-  try {
-    const url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
-    const res = await axios.get(url);
-
-    const newPrice = res.data.bitcoin.usd;
-    const now = new Date().toLocaleString();
-
-    let oldPrice = null;
-    let variation = null;
-
-    if (db) {
-      const collection = db.collection(process.env.MONGODB_COLLECTION);
-      const lastEntry = await collection.find().sort({ _id: -1 }).limit(1).toArray();
-      oldPrice = lastEntry[0]?.price ?? null;
-
-      if (oldPrice) {
-        variation = ((newPrice - oldPrice) / oldPrice * 100).toFixed(2);
-      }
-
-      await collection.insertOne({ price: newPrice, updatedAt: now });
-    }
-
-    cachedPrice = newPrice;
-    lastUpdate = now;
-
-    console.log(
-      `[✔] BTC: $${newPrice} (à ${now}) ${
-        variation !== null ? `| Δ ${variation}%` : ""
-      }`
-    );
-
-    return variation;
-  } catch (err) {
-    console.error('[❌] Erreur CoinGecko :', err.message);
-  }
-}
-
-// Mise à jour immédiate
-updateBitcoinPrice();
-
-// Toutes les 15 minutes
-setInterval(updateBitcoinPrice, 15 * 60 * 1000);
-
-// 🔥 Route API demandée par TON script.js
+// Prix actuel
 app.get('/btc-price', async (req, res) => {
   try {
-    if (!cachedPrice || !db) {
-      return res.status(503).json({ error: "Prix non disponible" });
-    }
+    if (!db) return res.status(503).json({ error: "DB non dispo" });
 
     const collection = db.collection(process.env.MONGODB_COLLECTION);
     const lastTwo = await collection.find().sort({ _id: -1 }).limit(2).toArray();
+    
+
+    if (lastTwo.length === 0) return res.status(503).json({ error: "Pas de prix" });
+
+    const cachedPrice = lastTwo[0].price;
+    const lastUpdate = lastTwo[0].updatedAt;
 
     let variation = null;
     if (lastTwo.length === 2) {
-      const old = lastTwo[1].price;
-      variation = ((cachedPrice - old) / old * 100).toFixed(2);
+      variation = ((cachedPrice - lastTwo[1].price) / lastTwo[1].price * 100).toFixed(2);
     }
+    console.log("Prix servi :", cachedPrice, "Variation :", variation, "Date :", lastUpdate);
 
-    res.json({
-      price: cachedPrice,
-      updatedAt: lastUpdate,
-      variation: variation
-    });
+    res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume });
+
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur /btc-price" });
   }
 });
 
-// 🔥 Route historique
+// Historique complet
 app.get('/btc-history', async (req, res) => {
   try {
     const collection = db.collection(process.env.MONGODB_COLLECTION);
@@ -117,7 +75,26 @@ app.get('/btc-history', async (req, res) => {
   }
 });
 
-// Lancement
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur lancé : http://localhost:${PORT}`);
+// ======================
+//  ROUTE CRON (optionnel, si tu veux déclencher via URL)
+// ======================
+const { updateBitcoinPrice } = require('./updateBTC.js');
+
+app.get('/updateBTC', async (req, res) => {
+  try {
+    await updateBitcoinPrice();
+    res.send("Mise à jour BTC OK");
+  } catch (err) {
+    res.status(500).send("Erreur update BTC");
+  }
 });
+
+// ======================
+//  DEMARRAGE DU SERVEUR
+// ======================
+async function start() {
+  await connectDB();
+  app.listen(PORT, () => console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`));
+}
+
+start();
