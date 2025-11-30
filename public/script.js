@@ -93,6 +93,7 @@ function calculateTrendSignalSmoothed(currentSmooth) {
 
       if (variation >= SEUIL) {
         signal = "Buy";
+        console.log("Signal d'achat généré");
       }
     }
 
@@ -113,6 +114,7 @@ function calculateTrendSignalSmoothed(currentSmooth) {
 
       if (variation >= SEUIL) {
         signal = "Sell";
+        console.log("Signal de vente généré");
       }
     }
 

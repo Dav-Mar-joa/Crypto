@@ -5,13 +5,8 @@ require('dotenv').config();
 // ======================
 // Variables lissage et signal
 // ======================
-let lastTrend = null;
-let lastSmoothPrice = null;
-let lastLow = null;
-let lastHigh = null;
-const SEUIL = 0.2; // Variation seuil en %
-
-let priceHistory = []; // historique en mémoire pour le lissage
+const SEUIL = 0.2; // Seuil variation en %
+let priceHistory = []; // Historique pour lissage
 
 // ======================
 // Lissage par moyenne mobile
@@ -31,33 +26,33 @@ function smoothPrice(data, windowSize = 3) {
 // ======================
 // Calcul du signal achat/vente
 // ======================
-function calculateTrendSignalSmoothed(currentSmooth) {
+function calculateTrendSignalSmoothed(currentSmooth, state) {
   let signal = "";
 
-  if (lastSmoothPrice === null) {
-    lastSmoothPrice = currentSmooth;
-    lastLow = currentSmooth;
-    lastHigh = currentSmooth;
-    return "";
+  if (state.lastSmoothPrice === null) {
+    state.lastSmoothPrice = currentSmooth;
+    state.lastLow = currentSmooth;
+    state.lastHigh = currentSmooth;
+    return signal;
   }
 
-  if (currentSmooth > lastSmoothPrice) {
-    lastHigh = Math.max(lastHigh, currentSmooth);
-    if (lastTrend === "down") {
-      const variation = ((currentSmooth - lastLow) / lastLow) * 100;
+  if (currentSmooth > state.lastSmoothPrice) {
+    state.lastHigh = Math.max(state.lastHigh, currentSmooth);
+    if (state.lastTrend === "down") {
+      const variation = ((currentSmooth - state.lastLow) / state.lastLow) * 100;
       if (variation >= SEUIL) signal = "Buy";
     }
-    lastTrend = "up";
-  } else if (currentSmooth < lastSmoothPrice) {
-    lastLow = Math.min(lastLow, currentSmooth);
-    if (lastTrend === "up") {
-      const variation = ((lastHigh - currentSmooth) / lastHigh) * 100;
+    state.lastTrend = "up";
+  } else if (currentSmooth < state.lastSmoothPrice) {
+    state.lastLow = Math.min(state.lastLow, currentSmooth);
+    if (state.lastTrend === "up") {
+      const variation = ((state.lastHigh - currentSmooth) / state.lastHigh) * 100;
       if (variation >= SEUIL) signal = "Sell";
     }
-    lastTrend = "down";
+    state.lastTrend = "down";
   }
 
-  lastSmoothPrice = currentSmooth;
+  state.lastSmoothPrice = currentSmooth;
   return signal;
 }
 
@@ -66,6 +61,7 @@ function calculateTrendSignalSmoothed(currentSmooth) {
 // ======================
 const client = new MongoClient(process.env.MONGODB_URI);
 let db;
+
 async function connectDB() {
   if (!db) {
     await client.connect();
@@ -75,13 +71,44 @@ async function connectDB() {
 }
 
 // ======================
-// Récupération prix BTC et update DB
+// Récupération de l'état précédent pour le signal
+// ======================
+async function loadSignalState(collection) {
+  const stateDoc = await collection.findOne({ type: "signalState" });
+  if (stateDoc) return stateDoc.state;
+  return { lastTrend: null, lastSmoothPrice: null, lastLow: null, lastHigh: null };
+}
+
+// ======================
+// Sauvegarde de l'état du signal
+// ======================
+async function saveSignalState(collection, state) {
+  await collection.updateOne(
+    { type: "signalState" },
+    { $set: { state } },
+    { upsert: true }
+  );
+}
+
+// ======================
+// Update prix BTC + calcul signal
 // ======================
 async function updateBitcoinPrice() {
   try {
     const db = await connectDB();
     const collection = db.collection(process.env.MONGODB_COLLECTION);
 
+    // Récupérer les derniers prix pour lissage
+    const lastEntries = await collection.find({ type: { $ne: "signalState" } })
+                                        .sort({ _id: -1 })
+                                        .limit(50)
+                                        .toArray();
+    priceHistory = lastEntries.map(e => e.price).reverse();
+
+    // Récupérer état précédent pour signal
+    const signalState = await loadSignalState(collection);
+
+    // Récupérer prix actuel
     const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true";
     const res = await axios.get(url);
 
@@ -89,28 +116,30 @@ async function updateBitcoinPrice() {
     const marketCap = res.data.bitcoin.usd_market_cap;
     const volume = res.data.bitcoin.usd_24h_vol;
 
-    // Historique DB
-    const lastEntry = await collection.find().sort({ _id: -1 }).limit(1).toArray();
-    let variation = null;
-    if (lastEntry.length > 0) {
-      variation = ((newPrice - lastEntry[0].price) / lastEntry[0].price * 100).toFixed(2);
-    }
+    // Calcul variation
+    const lastEntry = lastEntries[lastEntries.length - 1];
+    const variation = lastEntry ? ((newPrice - lastEntry.price) / lastEntry.price * 100).toFixed(2) : null;
 
+    // Enregistrer prix dans DB
     await collection.insertOne({
       price: newPrice,
       updatedAt: new Date(),
-      variation: variation,
-      marketCap: marketCap,
-      volume: volume
+      variation,
+      marketCap,
+      volume,
+      type: "price"  // pour distinguer du document signalState
     });
 
-    // ======================
-    // Calcul lissage + signal
-    // ======================
+    // Mise à jour historique pour lissage
     priceHistory.push(newPrice);
-    const smoothedHistory = smoothPrice(priceHistory);
-    const lastSmooth = smoothedHistory[smoothedHistory.length - 1];
-    const actionSignal = calculateTrendSignalSmoothed(lastSmooth);
+    const smoothed = smoothPrice(priceHistory);
+    const lastSmooth = smoothed[smoothed.length - 1];
+
+    // Calcul signal
+    const actionSignal = calculateTrendSignalSmoothed(lastSmooth, signalState);
+
+    // Sauvegarde état signal pour prochaines exécutions
+    await saveSignalState(collection, signalState);
 
     console.log(`Prix: $${newPrice} | Δ: ${variation}% | Signal: ${actionSignal}`);
     return { price: newPrice, signal: actionSignal };
@@ -121,7 +150,7 @@ async function updateBitcoinPrice() {
 }
 
 // ======================
-// Si lancé en cron
+// Si lancé directement (cron)
 // ======================
 if (require.main === module) {
   (async () => {
