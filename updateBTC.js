@@ -5,7 +5,7 @@ require('dotenv').config();
 // ======================
 // Variables lissage et signal
 // ======================
-const SEUIL = 0.2; // Seuil variation en %
+const SEUIL = 0.002; // Seuil variation en %
 let priceHistory = []; // Historique pour lissage
 
 // ======================
