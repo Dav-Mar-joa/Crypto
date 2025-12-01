@@ -33,26 +33,21 @@ function calculateTrendSignalSmoothed(currentSmooth, state) {
     state.lastSmoothPrice = currentSmooth;
     state.lastLow = currentSmooth;
     state.lastHigh = currentSmooth;
-    state.lastTrendChangePrice = currentSmooth; // prix au dernier changement de tendance
     return signal;
   }
 
   if (currentSmooth > state.lastSmoothPrice) {
     state.lastHigh = Math.max(state.lastHigh, currentSmooth);
     if (state.lastTrend === "down") {
-      // Changement de tendance : down -> up
-      const variationFromTrendChange = ((currentSmooth - state.lastTrendChangePrice) / state.lastTrendChangePrice) * 100;
-      if (variationFromTrendChange >= SEUIL) signal = "Buy";
-      state.lastTrendChangePrice = currentSmooth; // reset prix au changement
+      const variation = ((currentSmooth - state.lastLow) / state.lastLow) * 100;
+      if (variation >= SEUIL) signal = "Buy";
     }
     state.lastTrend = "up";
   } else if (currentSmooth < state.lastSmoothPrice) {
     state.lastLow = Math.min(state.lastLow, currentSmooth);
     if (state.lastTrend === "up") {
-      // Changement de tendance : up -> down
-      const variationFromTrendChange = ((state.lastTrendChangePrice - currentSmooth) / state.lastTrendChangePrice) * 100;
-      if (variationFromTrendChange >= SEUIL) signal = "Sell";
-      state.lastTrendChangePrice = currentSmooth; // reset prix au changement
+      const variation = ((state.lastHigh - currentSmooth) / state.lastHigh) * 100;
+      if (variation >= SEUIL) signal = "Sell";
     }
     state.lastTrend = "down";
   }
@@ -81,13 +76,7 @@ async function connectDB() {
 async function loadSignalState(collection) {
   const stateDoc = await collection.findOne({ type: "signalState" });
   if (stateDoc) return stateDoc.state;
-  return { 
-    lastTrend: null, 
-    lastSmoothPrice: null, 
-    lastLow: null, 
-    lastHigh: null, 
-    lastTrendChangePrice: null 
-  };
+  return { lastTrend: null, lastSmoothPrice: null, lastLow: null, lastHigh: null };
 }
 
 // ======================
@@ -96,7 +85,8 @@ async function loadSignalState(collection) {
 async function saveSignalState(collection, state) {
   await collection.updateOne(
     { type: "signalState" },
-    { $set: { state, updatedAt: new Date() } },
+    {updatedAt: new Date()},
+    { $set: { state } },
     { upsert: true }
   );
 }
@@ -128,43 +118,33 @@ async function updateBitcoinPrice() {
     const marketCap = res.data.bitcoin.usd_market_cap;
     const volume = res.data.bitcoin.usd_24h_vol;
 
-    // Calcul variation depuis le précédent prix
+    // Calcul variation
     const previousPrice = lastEntries.length > 0 ? lastEntries[lastEntries.length - 1].price : null;
-    const variationFromPrev = previousPrice ? ((newPrice - previousPrice) / previousPrice * 100).toFixed(2) : null;
+    const variation = previousPrice ? ((newPrice - previousPrice) / previousPrice * 100).toFixed(2) : null;
+
+    // Enregistrer le nouveau prix dans MongoDB
+    await collection.insertOne({
+      price: newPrice,
+      updatedAt: new Date(),
+      variation,
+      marketCap,
+      volume,
+      type: "price"
+    });
 
     // Mettre à jour l'historique et calculer le lissage
     priceHistory.push(newPrice);
     const smoothed = smoothPrice(priceHistory);
     const lastSmooth = smoothed[smoothed.length - 1];
 
-    // Calcul du signal et de la variation depuis le dernier changement de tendance
+    // Calcul du signal
     const actionSignal = calculateTrendSignalSmoothed(lastSmooth, signalState);
-    let variationFromTrendChange = null;
-    if (signalState.lastTrendChangePrice !== null) {
-      if (signalState.lastTrend === "up") {
-        variationFromTrendChange = ((lastSmooth - signalState.lastTrendChangePrice) / signalState.lastTrendChangePrice * 100).toFixed(2);
-      } else if (signalState.lastTrend === "down") {
-        variationFromTrendChange = ((signalState.lastTrendChangePrice - lastSmooth) / signalState.lastTrendChangePrice * 100).toFixed(2);
-      }
-    }
 
-    // Enregistrer le nouveau prix + info signal dans MongoDB
-    await collection.insertOne({
-      price: newPrice,
-      updatedAt: new Date(),
-      variationFromPrev,
-      variationFromTrendChange,
-      signal: actionSignal || null,
-      marketCap,
-      volume,
-      type: "price"
-    });
-
-    // Sauvegarder l'état du signal
+    // Sauvegarder l'état du signal pour la prochaine exécution
     await saveSignalState(collection, signalState);
 
-    console.log(`Prix: $${newPrice} | ΔPrev: ${variationFromPrev}% | ΔTrend: ${variationFromTrendChange}% | Signal: ${actionSignal}`);
-    return { price: newPrice, signal: actionSignal, variationFromPrev, variationFromTrendChange };
+    console.log(`Prix: $${newPrice} | Δ: ${variation}% | Signal: ${actionSignal}`);
+    return { price: newPrice, signal: actionSignal };
   } catch (err) {
     console.error("Erreur updateBTC :", err.message);
     return null;
