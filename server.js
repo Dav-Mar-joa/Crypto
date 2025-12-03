@@ -55,7 +55,7 @@ app.get('/btc-price', async (req, res) => {
     if (lastTwo.length === 2) {
       variation = ((cachedPrice - lastTwo[1].price) / lastTwo[1].price * 100).toFixed(2);
     }
-    console.log("Prix servi :", cachedPrice, "Variation :", variation, "Date :", lastUpdate);
+    // console.log("Prix servi :", cachedPrice, "Variation :", variation, "Date :", lastUpdate);
 
     res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume });
 
@@ -88,6 +88,27 @@ app.get('/updateBTC', async (req, res) => {
     res.status(500).send("Erreur update BTC");
   }
 });
+
+// ======================
+// HISTORIQUE DES TRADES
+// ======================
+app.get('/btc-trades', async (req, res) => {
+  try {
+    const collection = db.collection(process.env.MONGODB_COLLECTION);
+
+    // On récupère uniquement les documents avec un signal Buy ou Sell
+    const trades = await collection
+      .find({ signal: { $in: ["Buy", "Sell"] } })
+      .sort({ updatedAt: -1 })
+      .toArray();
+
+    res.json(trades);
+  } catch (err) {
+    console.error("Erreur /btc-trades :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 // ======================
 //  DEMARRAGE DU SERVEUR

@@ -2,178 +2,173 @@ const axios = require('axios');
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-// ======================
-// Variables lissage et signal
-// ======================
-const SEUIL = 0.002; // Seuil variation en %
-let priceHistory = []; // Historique pour lissage
+// ====== MONGO URL ======
+const url =
+  process.env.MONGODB_URI ||
+  process.env.MONGO_URL ||
+  process.env.MONGODB_URL;
 
-// ======================
-// Lissage par moyenne mobile
-// ======================
-function smoothPrice(data, windowSize = 3) {
-  const smoothed = [];
-  for (let i = 0; i < data.length; i++) {
-    const start = Math.max(0, i - Math.floor(windowSize / 2));
-    const end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
-    const window = data.slice(start, end);
-    const avg = window.reduce((sum, v) => sum + v, 0) / window.length;
-    smoothed.push(avg);
-  }
-  return smoothed;
+if (!url) {
+  console.error("❌ ERREUR : aucune variable MONGO n’est définie dans .env !");
+  process.exit(1);
 }
 
-// ======================
-// Calcul du signal achat/vente
-// ======================
-function calculateTrendSignalSmoothed(currentSmooth, state) {
+const client = new MongoClient(url);
+
+const DB_NAME = "Crypto";
+const COLLECTION = "Bitcoin";
+
+// ====== VARIABLES MÉMOIRE ======
+let lastSmooth = null;
+let lastLow = null;
+let lastHigh = null;
+let lastTrend = null;
+let lastBuyForProfit = null; // mémorise le vrai BUY local
+
+const SEUIL = 0.01; // 0.01% de variation pour déclencher signal
+
+// ====== LISSAGE (moyenne mobile simple) ======
+function smoothPrice(history, window = 2) {
+  if (history.length === 0) return null;
+  const take = history.slice(-window);
+  const avg = take.reduce((s, v) => s + v.price, 0) / take.length;
+  return avg;
+}
+
+// ====== SIGNAL ======
+function calculateSignal(currentSmooth) {
   let signal = "";
 
-  if (state.lastSmoothPrice === null) {
-    state.lastSmoothPrice = currentSmooth;
-    state.lastLow = currentSmooth;
-    state.lastHigh = currentSmooth;
-    state.lastTrendChangePrice = currentSmooth; // prix au dernier changement de tendance
-    return signal;
+  if (lastSmooth === null) {
+    lastSmooth = currentSmooth;
+    lastLow = currentSmooth;
+    lastHigh = currentSmooth;
+    return "";
   }
 
-  if (currentSmooth > state.lastSmoothPrice) {
-    state.lastHigh = Math.max(state.lastHigh, currentSmooth);
-    if (state.lastTrend === "down") {
-      // Changement de tendance : down -> up
-      const variationFromTrendChange = ((currentSmooth - state.lastTrendChangePrice) / state.lastTrendChangePrice) * 100;
-      if (variationFromTrendChange >= SEUIL) signal = "Buy";
-      state.lastTrendChangePrice = currentSmooth; // reset prix au changement
+  // HAUSSE
+  if (currentSmooth > lastSmooth) {
+    lastHigh = Math.max(lastHigh, currentSmooth);
+    if (lastTrend === "down") {
+      const variation = ((currentSmooth - lastLow) / lastLow) * 100;
+      if (variation >= SEUIL) signal = "Buy";
     }
-    state.lastTrend = "up";
-  } else if (currentSmooth < state.lastSmoothPrice) {
-    state.lastLow = Math.min(state.lastLow, currentSmooth);
-    if (state.lastTrend === "up") {
-      // Changement de tendance : up -> down
-      const variationFromTrendChange = ((state.lastTrendChangePrice - currentSmooth) / state.lastTrendChangePrice) * 100;
-      if (variationFromTrendChange >= SEUIL) signal = "Sell";
-      state.lastTrendChangePrice = currentSmooth; // reset prix au changement
-    }
-    state.lastTrend = "down";
+    lastTrend = "up";
   }
 
-  state.lastSmoothPrice = currentSmooth;
+  // BAISSE
+  else if (currentSmooth < lastSmooth) {
+    lastLow = Math.min(lastLow, currentSmooth);
+    if (lastTrend === "up") {
+      const variation = ((lastHigh - currentSmooth) / lastHigh) * 100;
+      if (variation >= SEUIL) signal = "Sell";
+    }
+    lastTrend = "down";
+  }
+
+  lastSmooth = currentSmooth;
   return signal;
 }
 
-// ======================
-// Connexion MongoDB
-// ======================
-const client = new MongoClient(process.env.MONGODB_URI);
-let db;
-
-async function connectDB() {
-  if (!db) {
-    await client.connect();
-    db = client.db(process.env.MONGODB_DBNAME);
-  }
-  return db;
-}
-
-// ======================
-// Récupération de l'état précédent pour le signal
-// ======================
-async function loadSignalState(collection) {
-  const stateDoc = await collection.findOne({ type: "signalState" });
-  if (stateDoc) return stateDoc.state;
-  return { 
-    lastTrend: null, 
-    lastSmoothPrice: null, 
-    lastLow: null, 
-    lastHigh: null, 
-    lastTrendChangePrice: null 
-  };
-}
-
-// ======================
-// Sauvegarde de l'état du signal
-// ======================
-async function saveSignalState(collection, state) {
-  await collection.updateOne(
-    { type: "signalState" },
-    { $set: { state, updatedAt: new Date() } },
-    { upsert: true }
-  );
-}
-
-// ======================
-// Update prix BTC + calcul signal
-// ======================
+// ====== UPDATE PRINCIPAL ======
 async function updateBitcoinPrice() {
   try {
-    const db = await connectDB();
-    const collection = db.collection(process.env.MONGODB_COLLECTION);
+    await client.connect();
+    const db = client.db(DB_NAME);
+    const col = db.collection(COLLECTION);
 
-    // Récupérer les derniers prix pour le lissage
-    const lastEntries = await collection.find({ type: "price" })
-                                       .sort({ _id: -1 })
-                                       .limit(50)
-                                       .toArray();
+    // 1️⃣ Récupère prix API
+    const res = await axios.get(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+    );
+    const price = res.data.bitcoin.usd;
 
-    priceHistory = lastEntries.length > 0 ? lastEntries.map(e => e.price).reverse() : [];
+    // 2️⃣ Récupère historique pour le lissage
+    const history = await col.find().sort({ updatedAt: 1 }).toArray();
+    const smooth = smoothPrice(history.concat([{ price }]));
 
-    // Récupérer l'état du signal
-    const signalState = await loadSignalState(collection);
-
-    // Récupérer le prix actuel depuis CoinGecko
-    const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true";
-    const res = await axios.get(url);
-
-    const newPrice = res.data.bitcoin.usd;
-    const marketCap = res.data.bitcoin.usd_market_cap;
-    const volume = res.data.bitcoin.usd_24h_vol;
-
-    // Calcul variation depuis le précédent prix
-    const previousPrice = lastEntries.length > 0 ? lastEntries[lastEntries.length - 1].price : null;
-    const variationFromPrev = previousPrice ? ((newPrice - previousPrice) / previousPrice * 100).toFixed(2) : null;
-
-    // Mettre à jour l'historique et calculer le lissage
-    priceHistory.push(newPrice);
-    const smoothed = smoothPrice(priceHistory);
-    const lastSmooth = smoothed[smoothed.length - 1];
-
-    // Calcul du signal et de la variation depuis le dernier changement de tendance
-    const actionSignal = calculateTrendSignalSmoothed(lastSmooth, signalState);
-    let variationFromTrendChange = null;
-    if (signalState.lastTrendChangePrice !== null) {
-      if (signalState.lastTrend === "up") {
-        variationFromTrendChange = ((lastSmooth - signalState.lastTrendChangePrice) / signalState.lastTrendChangePrice * 100).toFixed(2);
-      } else if (signalState.lastTrend === "down") {
-        variationFromTrendChange = ((signalState.lastTrendChangePrice - lastSmooth) / signalState.lastTrendChangePrice * 100).toFixed(2);
-      }
+    // 3️⃣ Calcul variation par rapport au dernier prix enregistré
+    let variation = null;
+    if (history.length > 0) {
+      const lastPrice = history[history.length - 1].price;
+      variation = ((price - lastPrice) / lastPrice) * 100;
     }
 
-    // Enregistrer le nouveau prix + info signal dans MongoDB
-    await collection.insertOne({
-      price: newPrice,
-      updatedAt: new Date(),
-      variationFromPrev,
-      variationFromTrendChange,
-      signal: actionSignal || null,
-      marketCap,
-      volume,
-      type: "price"
+    // 4️⃣ Calcul signal
+    const signal = calculateSignal(smooth);
+
+    // Variables pour profit
+    let profitUSD = null;
+    let profitPercent = null;
+    let lastBuyPrice = null;
+    let sellPrice = null;
+
+    // === Gérer le BUY ===
+    if (signal === "Buy") {
+      lastBuyForProfit = price; // mémorise le prix du BUY local
+      console.log(`🔔 BUY détecté à ${price} USD`);
+    }
+
+    // === Gérer le SELL ===
+    if (signal === "Sell" && lastBuyForProfit !== null) {
+      lastBuyPrice = lastBuyForProfit;
+      sellPrice = price;
+      profitUSD = sellPrice - lastBuyPrice;
+      profitPercent = (profitUSD / lastBuyPrice) * 100;
+
+      console.log(
+        `🔔 SELL détecté ! BUY: ${lastBuyPrice}, SELL: ${sellPrice}, Profit USD: ${profitUSD.toFixed(2)}, Profit %: ${profitPercent.toFixed(2)}`
+      );
+
+      // Après VENTE → réinitialisation
+      lastBuyForProfit = null;
+    }
+
+    // Toujours enregistrer la valeur du dernier BUY connu
+    const lastBuyValueForDB = lastBuyForProfit;
+
+    // 5️⃣ Sauvegarde MongoDB
+    await col.insertOne({
+      price,
+      smoothPrice: smooth,
+      signal,
+      variation,
+
+      // 🔥 toujours stocké : même en dehors BUY/SELL
+      lastBuyValue: lastBuyValueForDB,
+
+      // 🔥 seulement sur SELL
+      lastBuyPrice,
+      sellPrice,
+      profitUSD,
+      profitPercent,
+
+      updatedAt: new Date()
     });
 
-    // Sauvegarder l'état du signal
-    await saveSignalState(collection, signalState);
+    console.log("✔️ BTC enregistré :", {
+      price,
+      smooth,
+      signal,
+      lastBuyValue: lastBuyValueForDB,
+      lastBuyPrice,
+      sellPrice,
+      profitUSD,
+      profitPercent,
+      variation
+    });
 
-    console.log(`Prix: $${newPrice} | ΔPrev: ${variationFromPrev}% | ΔTrend: ${variationFromTrendChange}% | Signal: ${actionSignal}`);
-    return { price: newPrice, signal: actionSignal, variationFromPrev, variationFromTrendChange };
   } catch (err) {
-    console.error("Erreur updateBTC :", err.message);
-    return null;
+    console.error("Erreur update BTC :", err);
   }
 }
 
-// ======================
-// Si exécuté directement (cron)
-// ======================
+// // Intervalle 60 sec
+// setInterval(async () => {
+//   console.log("----- Nouvelle itération -----");
+//   await updateBitcoinPrice();
+// }, 60000);
+
 if (require.main === module) {
   (async () => {
     await updateBitcoinPrice();
@@ -181,4 +176,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { updateBitcoinPrice };
+module.exports = updateBitcoinPrice;

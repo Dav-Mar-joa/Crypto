@@ -15,41 +15,44 @@
   <div class="container">
     <h1>Bitcoin (USD)</h1>
 
-    <div class="buttons-wrapper">
-      <!-- Variation / Price -->
-      <label class="toggle-line">
-        <input type="checkbox" id="check-variation" checked>
-        <button id="button-toggle" class="button-toggle">Variation</button>
-      </label>
-
-      <!-- Volume / Market Cap -->
-      <label class="toggle-line">
-        <input type="checkbox" id="check-volume" >
-        <button id="button-toggle2" class="button-toggle2">Volume</button>
-      </label>
-
-      
-
-      <!-- Price lissé -->
-      <label class="toggle-line">
-        <input type="checkbox" id="check-smooth">
-        Price smoothed
-      </label>
-      <label class="toggle-line">
-        <div id="signal" class=""></div>
-        
-    </div>
+    
 
     <div class="btc-info">
       <p id="prix" class="btc-prix">Chargement...</p>
       <p id="variation" class="btc-variation"></p>
+      <div class="buttons-wrapper">
+        <!-- Variation / Price -->
+        <label class="toggle-line">
+          <input type="checkbox" id="check-variation" checked>
+          <button id="button-toggle" class="button-toggle">Variation</button>
+        </label>
+
+        <!-- Volume / Market Cap -->
+        <label class="toggle-line">
+          <input type="checkbox" id="check-volume" >
+          <button id="button-toggle2" class="button-toggle2">Volume</button>
+        </label>
+
+        
+
+        <!-- Price lissé -->
+        <label class="toggle-line">
+          <input type="checkbox" id="check-smooth">
+          Price smoothed
+        </label>
+        <label class="toggle-line">
+          <div id="signal" class=""></div>
+          
+      </div>
       <canvas id="chart"></canvas> 
       <p id="maj" class="btc-maj"></p>
+      <a class ="boutonHistorique" href="/trades.html">Historique des trades</a>
     </div>
   </div>
 
   <!-- Script principal -->
   <script src="script.js" type="module"></script>
+
 
   <script>
     // --- Enregistrement du Service Worker ---

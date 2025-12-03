@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Historique des Trades</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <style>
+    table {
+      width: 80%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #111;
+      color: white;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #333;
+      text-align: center;
+    }
+    th {
+      background: #222;
+      font-weight: bold;
+    }
+    .profit-pos { color: #00ff9d; }
+    .profit-neg { color: #ff4444; }
+  </style>
+</head>
+<body>
+  <h1>Historique des Trades</h1>
+
+  <a class = "boutonGraphique" href="/index.html">Graphique</a>
+
+  <table id="tradeTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Signal</th>
+        <th>Achat</th>
+        <th>Vente</th>
+        <th>Profit (USD)</th>
+        <th>Profit %</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  
+
+  <script>
+    async function loadTrades() {
+      const res = await fetch("/btc-trades");
+      const trades = await res.json();
+
+      const tbody = document.querySelector("#tradeTable tbody");
+      tbody.innerHTML = "";
+
+      trades.forEach(t => {
+        const tr = document.createElement("tr");
+        if(t.lastBuyPrice != null) {
+          
+            tr.innerHTML = `
+            <td>${new Date(t.updatedAt).toLocaleString()}</td>
+            <td>${t.signal}</td>
+            <td>${t.lastBuyPrice ?? "-"}</td>
+            <td>${t.sellPrice ?? "-"}</td>
+            <td class="${t.profitUSD >= 0 ? "profit-pos" : "profit-neg"}">
+                ${t.profitUSD ?? "-"}
+            </td>
+            <td class="${t.profitUSD >= 0 ? "profit-pos" : "profit-neg"}">
+                ${t.profitPercent ? t.profitPercent.toFixed(4) + "%" : "-"}
+            </td>
+            `;
+            }
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    loadTrades();
+    setInterval(loadTrades, 60000);
+  </script>
+</body>
+</html>

@@ -53,21 +53,16 @@ h1 {
 
 #variation.positive {
   color: #00ff95; /* vert */
+  margin-bottom: 1rem;
+
 }
 
 #variation.negative {
   color: #ff4d4d; /* rouge */
+  margin-bottom: 1rem;
+ 
 }
 
-/* Cadre type panneau de trading */
-.container {
-  background: #161b22;
-  padding: 25px 35px;
-  border-radius: 16px;
-  box-shadow: 0 0 25px rgba(0,0,0,0.3);
-  text-align: center;
-  border: 1px solid #21262d;
-}
 
 /* Responsive */
 @media (max-width: 600px) {
@@ -130,14 +125,14 @@ h1 {
   margin-left: 9rem; /* pousse le bouton à l'extrémité droite */
 /* }  */
 
-/* Conteneur des deux boutons */
 .buttons-wrapper {
-  position: absolute;
-  top: 20px;
-  right: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 10px; /* espace entre les deux boutons */
+  flex-direction: row;
+  flex-wrap: wrap;           /* les boutons passent à la ligne si trop étroits */
+  align-items: center;       /* centre verticalement */
+  justify-content: center;   /* centre horizontalement */
+  gap: 1vw;                  /* espace relatif entre les boutons */
+  margin-bottom: 1rem;
 }
 
 /* Boutons */
@@ -145,56 +140,70 @@ h1 {
   background-color: #238636;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 0.8em 1.5em;      /* taille adaptative */
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+  flex: 1 1 auto;            /* flexible sur petits écrans */
+  min-width: 120px;          /* largeur minimum */
+  text-align: center;
 }
 
-.toggle-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toggle-line input {
-  width: 20px;
-  height: 20px;
-}
 /* Signal buy/sell */
 .buy {
-  color: #00ff95;           /* vert */
+  color: #00ff95; 
   font-weight: bold;
 }
 
 .sell {
-  color: #ff1f1f;           /* rouge */
+  color: #ff1f1f; 
   font-weight: bold;
 }
 
 /* Conteneur des signaux */
 #signal {
-  max-height: 250px;          /* hauteur max pour le scroll */
-  overflow-y: auto;           /* scroll vertical si trop de lignes */
-  padding: 10px;
-  margin-top: 30px;
+  max-height: 25vh;          /* hauteur relative à l'écran */
+  overflow-y: auto; 
+  padding: 0.5rem;
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 8px;
   background-color: rgba(0, 0, 0, 0.6);
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 1.2rem;
   line-height: 1.4;
   color: #58a6ff;
+  width: 90%;                /* largeur adaptative */
+  margin: 1rem auto;
 }
 
 /* Ligne individuelle des signaux */
 #signal div {
-  padding: 2px 0;
+  padding: 0.2rem 0;
   border-bottom: 1px dashed rgba(255,255,255,0.1);
 }
 
-/* Dernier signal plus visible */
 #signal div:last-child {
   border-bottom: none;
+}
+
+.boutonHistorique{
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #238636;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+.boutonGraphique{
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #238636;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1rem;
 }
 
