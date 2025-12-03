@@ -73,45 +73,43 @@ function calculateSignal(currentSmooth) {
 // ====== UPDATE PRINCIPAL ======
 async function updateBitcoinPrice() {
   try {
-    // 👉 empêche multi-connexion
-    if (!client.topology || client.topology.isDestroyed()) {
-      await client.connect();
-    }
-
+    await client.connect();
     const db = client.db(DB_NAME);
     const col = db.collection(COLLECTION);
 
-    // --- 1) API
+    // 1️⃣ Récupère prix API
     const res = await axios.get(
       "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
     );
     const price = res.data.bitcoin.usd;
 
-    // --- 2) Historique
+    // 2️⃣ Récupère historique pour le lissage
     const history = await col.find().sort({ updatedAt: 1 }).toArray();
     const smooth = smoothPrice(history.concat([{ price }]));
 
-    // --- 3) Variation
+    // 3️⃣ Calcul variation par rapport au dernier prix enregistré
     let variation = null;
     if (history.length > 0) {
       const lastPrice = history[history.length - 1].price;
       variation = ((price - lastPrice) / lastPrice) * 100;
     }
 
-    // --- 4) Signal
+    // 4️⃣ Calcul signal
     const signal = calculateSignal(smooth);
 
-    // --- PROFIT ---
+    // Variables pour profit
     let profitUSD = null;
     let profitPercent = null;
     let lastBuyPrice = null;
     let sellPrice = null;
 
+    // === Gérer le BUY ===
     if (signal === "Buy") {
-      lastBuyForProfit = price;
+      lastBuyForProfit = price; // mémorise le prix du BUY local
       console.log(`🔔 BUY détecté à ${price} USD`);
     }
 
+    // === Gérer le SELL ===
     if (signal === "Sell" && lastBuyForProfit !== null) {
       lastBuyPrice = lastBuyForProfit;
       sellPrice = price;
@@ -119,26 +117,27 @@ async function updateBitcoinPrice() {
       profitPercent = (profitUSD / lastBuyPrice) * 100;
 
       console.log(
-        `🔔 SELL détecté ! BUY: ${lastBuyPrice}, SELL: ${sellPrice}, Profit USD: ${profitUSD.toFixed(
-          2
-        )}, Profit %: ${profitPercent.toFixed(2)}`
+        `🔔 SELL détecté ! BUY: ${lastBuyPrice}, SELL: ${sellPrice}, Profit USD: ${profitUSD.toFixed(2)}, Profit %: ${profitPercent.toFixed(2)}`
       );
 
+      // Après VENTE → réinitialisation
       lastBuyForProfit = null;
     }
 
-    // --- Stocke dernier BUY (même hors SELL)
+    // Toujours enregistrer la valeur du dernier BUY connu
     const lastBuyValueForDB = lastBuyForProfit;
 
-    // --- 5) Insert MongoDB
+    // 5️⃣ Sauvegarde MongoDB
     await col.insertOne({
       price,
       smoothPrice: smooth,
       signal,
       variation,
 
+      // 🔥 toujours stocké : même en dehors BUY/SELL
       lastBuyValue: lastBuyValueForDB,
 
+      // 🔥 seulement sur SELL
       lastBuyPrice,
       sellPrice,
       profitUSD,
@@ -164,5 +163,17 @@ async function updateBitcoinPrice() {
   }
 }
 
-// 👉 Export correct !
-module.exports = { updateBitcoinPrice };
+// // Intervalle 60 sec
+// setInterval(async () => {
+//   console.log("----- Nouvelle itération -----");
+//   await updateBitcoinPrice();
+// }, 60000);
+
+if (require.main === module) {
+  (async () => {
+    await updateBitcoinPrice();
+    process.exit(0);
+  })();
+}
+
+module.exports = updateBitcoinPrice;
