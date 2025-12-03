@@ -164,5 +164,15 @@ async function updateBitcoinPrice() {
   }
 }
 
+// ======================
+// Si exécuté directement (cron)
+// ======================
+if (require.main === module) {
+  (async () => {
+    await updateBitcoinPrice();
+    process.exit(0);
+  })();
+}
+
 // 👉 Export correct !
 module.exports = { updateBitcoinPrice };
