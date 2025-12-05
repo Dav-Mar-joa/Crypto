@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Historique Signaux BTC</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 15px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+
+    th {
+      background: #222;
+      color: #fff;
+    }
+
+    .rise { color: #4caf50; font-weight: bold; }      /* Vert */
+    .fall { color: #f44336; font-weight: bold; }      /* Rouge */
+    .buy { color: #2196f3; font-weight: bold; }       /* Bleu */
+    .sell { color: #ff9800; font-weight: bold; }      /* Orange */
+  </style>
+</head>
+<body>
+
+  <h1>Historique des signaux BTC</h1>
+  <p>Montées, descentes, Buy, Sell — en temps réel.</p>
+  <div class="btc-info">
+    <a class = "boutonGraphique" href="/index.html">Graphique</a>
+    <a class = "boutonGraphique" href="/trades.html">Trades</a>
+  </div> 
+
+  <table id="signalsTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Price</th>
+        <th>Last buy</th>
+        <th>Trend</th>
+        <th>Signal</th>
+        <th>Profit</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadSignals() {
+      const res = await fetch("/btc-signals");
+      const data = await res.json();
+
+      const tbody = document.querySelector("#signalsTable tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(s => {
+        const tr = document.createElement("tr");
+
+        const trendClass =
+          s.trend === "Rise" ? "rise" :
+          s.trend === "Fall" ? "fall" : "";
+
+        const signalClass =
+          s.signal === "Buy" ? "buy" :
+          s.signal === "Sell" ? "sell" : "";
+          if (s.signal != "HOLD") {
+           
+            tr.innerHTML = `
+          <td>${new Date(s.date).toLocaleString("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          })}</td>
+
+          <td>${s.price}</td>
+          <td>${s.lastBuy?.toFixed(2) ?? "-"}</td>
+
+          <td class="${trendClass}">${s.trend}</td>
+
+          <td class="${signalClass}">${s.signal}</td>
+
+          <td>${s.profit ? s.profit.toFixed(4) + "%" : "-"}</td>
+        `;
+        }
+        tbody.appendChild(tr);
+      });
+    }
+
+    loadSignals();
+    setInterval(loadSignals, 60000);
+  </script>
+</body>
+</html>

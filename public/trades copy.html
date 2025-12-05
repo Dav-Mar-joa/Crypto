@@ -9,10 +9,7 @@
 <body>
   <h1>Historique des Trades</h1>
 
- <div class="btc-info">
-    <a class = "boutonGraphique" href="/index.html">Graphique</a>
-    <a class = "boutonGraphique" href="/signals.html">Signals</a>
-  </div> 
+  <a class = "boutonGraphique" href="/index.html">Graphique</a>
 
   <table id="tradeTable">
     <thead>
@@ -27,11 +24,10 @@
     </thead>
     <tbody></tbody>
   </table>
-  
-  
+
   
 
-  <!-- <script>
+  <script>
     async function loadTrades() {
       const res = await fetch("/btc-trades");
       const trades = await res.json();
@@ -81,43 +77,6 @@
 
     loadTrades();
     setInterval(loadTrades, 60000);
-  </script> -->
-<script>
-async function loadTrades() {
-  const res = await fetch("/btc-trades");
-  const trades = await res.json();
-
-  const tbody = document.querySelector("#tradeTable tbody");
-  tbody.innerHTML = "";
-
-  trades.forEach(t => {
-    const tr = document.createElement("tr");
-    
-    tr.innerHTML = `
-      <td>${new Date(t.date).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
-      })}</td>
-      <td>${t.buyPrice ?? "-"}</td>
-      <td>${t.sellPrice ?? "-"}</td>
-      <td class="${t.profitUSD >= 0 ? "profit-pos" : "profit-neg"}">
-        ${t.profitUSD ?? "-"}
-      </td>
-      <td class="${t.profitUSD >= 0 ? "profit-pos" : "profit-neg"}">
-        ${t.profitPercent ? t.profitPercent.toFixed(4) + "%" : "-"}
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-}
-
-loadTrades();
-setInterval(loadTrades, 60000);
-</script>
-
-
+  </script>
 </body>
 </html>

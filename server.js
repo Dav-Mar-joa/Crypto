@@ -89,22 +89,61 @@ app.get('/updateBTC', async (req, res) => {
   }
 });
 
+// // ======================
+// // HISTORIQUE DES TRADES
+// // ======================
+// app.get('/btc-trades', async (req, res) => {
+//   try {
+//     const collection = db.collection(process.env.MONGODB_COLLECTION);
+
+//     // On récupère uniquement les documents avec un signal Buy ou Sell
+//     const trades = await collection
+//       .find({ signal: { $in: ["Buy", "Sell"] } })
+//       .sort({ updatedAt: -1 })
+//       .toArray();
+
+//     res.json(trades);
+//   } catch (err) {
+//     console.error("Erreur /btc-trades :", err);
+//     res.status(500).json({ error: "Erreur serveur" });
+//   }
+// });
+
 // ======================
 // HISTORIQUE DES TRADES
 // ======================
 app.get('/btc-trades', async (req, res) => {
   try {
-    const collection = db.collection(process.env.MONGODB_COLLECTION);
+    const collection = db.collection("Trades"); // <-- nouvelle collection
 
-    // On récupère uniquement les documents avec un signal Buy ou Sell
+    // On récupère tous les trades réels
     const trades = await collection
-      .find({ signal: { $in: ["Buy", "Sell"] } })
-      .sort({ updatedAt: -1 })
+      .find()
+      .sort({ date: -1 }) // tri du plus récent au plus ancien
       .toArray();
 
     res.json(trades);
   } catch (err) {
     console.error("Erreur /btc-trades :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// ======================
+// HISTORIQUE DES SIGNALS
+// ======================
+app.get('/btc-signals', async (req, res) => {
+  try {
+    const col = db.collection("Signals");  // ta collection Signals
+
+    const signals = await col
+      .find()
+      .sort({ date: -1 })
+      .toArray();
+
+    res.json(signals);
+  } catch (err) {
+    console.error("Erreur /btc-signals :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
