@@ -263,20 +263,37 @@ async function loop() {
 //     setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
 // })();
 
-// ========= EXÉCUTION DIRECTE POUR CRON =========
-if (require.main === module) {
-    (async () => {
-        console.log("Chargement état (CRON)...");
-        await client.connect();
-        await loadLastState();
-
-        console.log("Exécution 1 cycle (CRON)...");
-        await loop();
-
-        console.log("Fin du script. CRON relancera.");
-        process.exit(0);
-    })();
+async function updateBitcoinPrice() {
+    await loadLastState();
+    await loop();
 }
+
+// // ========= EXÉCUTION DIRECTE POUR CRON =========
+// if (require.main === module) {
+//     (async () => {
+//         console.log("Chargement état (CRON)...");
+//         await client.connect();
+//         await loadLastState();
+
+//         console.log("Exécution 1 cycle (CRON)...");
+//         await loop();
+
+//         console.log("Fin du script. CRON relancera.");
+//         process.exit(0);
+//     })();
+// }
+
+// ======================
+// Si exécuté directement (cron)
+// ======================
+if (require.main === module) {
+  (async () => {
+    await updateBitcoinPrice();
+    process.exit(0);
+  })();
+}
+
+module.exports = { updateBitcoinPrice };
 
 // // =========================
 // // EXPORT pour server.js
