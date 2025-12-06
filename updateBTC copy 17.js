@@ -251,32 +251,17 @@ async function loop() {
 // lance toutes les 60 secondes
 // setInterval(loop, 60_000);
 // ========= DÉMARRAGE =========
-// (async () => {
-//     console.log("Chargement de l'état du bot...");
-//     await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
+(async () => {
+    console.log("Chargement de l'état du bot...");
+    await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
 
-//     console.log("Lancement de la première analyse...");
-//     await loop();            // ⬅️ Première exécution non différée
+    console.log("Lancement de la première analyse...");
+    await loop();            // ⬅️ Première exécution non différée
 
-//     console.log("Démarrage de la boucle toutes les 60 secondes...");
-//     //  process.exit(0);
-//     setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
-// })();
-
-// ========= EXÉCUTION DIRECTE POUR CRON =========
-if (require.main === module) {
-    (async () => {
-        console.log("Chargement état (CRON)...");
-        await client.connect();
-        await loadLastState();
-
-        console.log("Exécution 1 cycle (CRON)...");
-        await loop();
-
-        console.log("Fin du script. CRON relancera.");
-        process.exit(0);
-    })();
-}
+    console.log("Démarrage de la boucle toutes les 60 secondes...");
+    //  process.exit(0);
+    setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
+})();
 
 // // =========================
 // // EXPORT pour server.js

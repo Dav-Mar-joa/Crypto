@@ -39,34 +39,17 @@ let profit = null;
 let nbBTC = 0.01; // nbre BTC
 
 // ======== RÉCUPÉRATION DU PRIX BTC =========
-// async function getPrice() {
-//     try {
-//         const r = await axios.get(
-//             "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
-//         );
-//         return parseFloat(r.data.price);
-//     } catch (err) {
-//         console.error("Erreur API Binance :", err.message);
-//         return null;
-//     }
-// }
-
-// ======== RÉCUPÉRATION DU PRIX BTC via CoinGecko =========
 async function getPrice() {
     try {
         const r = await axios.get(
-            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+            "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
         );
-
-        const price = r.data.bitcoin.usd;
-
-        return parseFloat(price);
+        return parseFloat(r.data.price);
     } catch (err) {
-        console.error("Erreur API CoinGecko :", err.message);
+        console.error("Erreur API Binance :", err.message);
         return null;
     }
 }
-
 
 // ======== LOGIQUE DE SIGNAL =========
 // function getSignal(price) {
@@ -136,14 +119,11 @@ function getSignal(price) {
         lastLow = Math.min(lastLow, price);
 
         if (lastTrend === "up" && inPosition) {
-            const gain = price - lastBuy; // calcul du gain 
-            // réel
-            const commission = price * (commisionPrice / 100); // 0.15% du prix de vente
-            const gainNet = gain - commission;
+            const gain = price - lastBuy; // calcul du gain réel
             const variation = (price- lastHigh) / lastHigh*100;
             console.log("Variation pour SELL :", variation);
             console.log("prix achat et vente : gain", lastBuy, price , price-lastBuy);
-            if (variation < -SEUIL && gainNet > 0) {
+            if (variation < -SEUIL && gain > commisionPrice*gain) {
                 signal = "SELL";
                 lastSell = price
                 inPosition = false;
@@ -196,9 +176,7 @@ async function saveToDB(price, signal) {
             lastSell,
             variationProfit,
             profit,
-            date: new Date(),
-	    inPosition
-           
+            date: new Date()
         });
 
         console.log("💾 Données enregistrées dans MongoDB !");
@@ -220,20 +198,12 @@ async function loadLastState() {
     lastSell = lastSignal[0].lastSell;
     inPosition = lastSignal[0].inPosition || false;
   }
-  console.log("État restauré :", {
-        lastBuy,
-        lastSell,
-        inPosition,
-        lastLow,
-        lastHigh,
-        lastTrend
-    });
 }
 
 
 // ======== LOOP =========
-async function loop() {
-// async function updateBitcoinPrice() {
+// async function loop() {
+async function updateBitcoinPrice() {
     const price = await getPrice();
     if (!price) return;
 
@@ -248,48 +218,21 @@ async function loop() {
     await saveToDB(price, signal);
 }
 
-// lance toutes les 60 secondes
-// setInterval(loop, 60_000);
-// ========= DÉMARRAGE =========
-// (async () => {
-//     console.log("Chargement de l'état du bot...");
-//     await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
+// // lance toutes les 20 secondes
+// setInterval(loop, 20_000);
 
-//     console.log("Lancement de la première analyse...");
-//     await loop();            // ⬅️ Première exécution non différée
+// =========================
+// EXPORT pour server.js
+// =========================
+module.exports = { updateBitcoinPrice };
 
-//     console.log("Démarrage de la boucle toutes les 60 secondes...");
-//     //  process.exit(0);
-//     setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
-// })();
-
-// ========= EXÉCUTION DIRECTE POUR CRON =========
+// =========================
+// EXECUTION DIRECTE pour CRON
+// =========================
 if (require.main === module) {
-    (async () => {
-        console.log("Chargement état (CRON)...");
-        await client.connect();
-        await loadLastState();
-
-        console.log("Exécution 1 cycle (CRON)...");
-        await loop();
-
-        console.log("Fin du script. CRON relancera.");
-        process.exit(0);
-    })();
+  (async () => {
+    await loadLastState();
+    await updateBitcoinPrice();
+    process.exit(0);
+  })();
 }
-
-// // =========================
-// // EXPORT pour server.js
-// // =========================
-// module.exports = { updateBitcoinPrice };
-
-// // =========================
-// // EXECUTION DIRECTE pour CRON
-// // =========================
-// if (require.main === module) {
-//   (async () => {
-//     await loadLastState();
-//     await updateBitcoinPrice();
-//     process.exit(0);
-//   })();
-// }
