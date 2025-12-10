@@ -51,99 +51,6 @@ let nbBTC = 0.01; // nbre BTC
 //     }
 // }
 
-async function loadWallet() {
-    const db = client.db(DB_NAME);
-    const col = db.collection("Wallet");
-
-    let w = await col.findOne({ type: "wallet" });
-    if (w) return w;
-
-    const newWallet = {
-        type: "wallet",
-        usdt: 400,
-        btc: 0,
-        totalInvested: 400,
-        totalFeesPaid: 0,
-        totalProfit: 0,
-        lastUpdate: new Date()
-    };
-
-    await col.insertOne(newWallet);
-    return newWallet;
-}
-
-async function simulateBuy(price, amountUSDT) {
-    const feeRate = 0.0015; // 0.15%
-
-    const wallet = await loadWallet();
-    if (wallet.usdt < amountUSDT) {
-        console.log("❌ Pas assez d'USDT");
-        return wallet;
-    }
-
-    const btcBought = amountUSDT / price;
-    const feeBTC = btcBought * feeRate;
-
-    wallet.btc += btcBought - feeBTC;
-    wallet.usdt -= amountUSDT;
-    wallet.totalFeesPaid += feeBTC * price;
-
-    wallet.lastUpdate = new Date();
-
-    await client.db(DB_NAME).collection("Wallet").updateOne(
-        { type: "wallet" },
-        { $set: wallet }
-    );
-
-    await saveTrade("BUY", price, amountUSDT, btcBought - feeBTC);
-
-    return wallet;
-}
-
-async function simulateSell(price) {
-    const feeRate = 0.0015;
-
-    const wallet = await loadWallet();
-    if (wallet.btc <= 0) {
-        console.log("❌ Pas de BTC à vendre");
-        return wallet;
-    }
-
-    const usdtReceived = wallet.btc * price;
-    const feeUSDT = usdtReceived * feeRate;
-
-    wallet.usdt += (usdtReceived - feeUSDT);
-    wallet.totalFeesPaid += feeUSDT;
-    wallet.totalProfit = wallet.usdt - wallet.totalInvested;
-    wallet.btc = 0;
-
-    wallet.lastUpdate = new Date();
-
-    await client.db(DB_NAME).collection("Wallet").updateOne(
-        { type: "wallet" },
-        { $set: wallet }
-    );
-
-    await saveTrade("SELL", price, usdtReceived - feeUSDT, wallet.btc);
-
-    return wallet;
-}
-
-async function saveTrade(type, price, amountUSDT, btcAmount) {
-    const col = client.db(DB_NAME).collection(COLLECTION_TRADES);
-
-    await col.insertOne({
-        type,
-        price,
-        amountUSDT,
-        btcAmount,
-        date: new Date()
-    });
-
-    console.log(`💼 Trade enregistré : ${type} @ ${price}`);
-}
-
-
 // ======== RÉCUPÉRATION DU PRIX BTC via CoinGecko =========
 async function getPrice() {
     try {
@@ -338,15 +245,6 @@ async function loop() {
         "| Trend:", lastTrend,
         "| Signal:", signal
     );
-
-    if (signal === "BUY" && !inPosition) {
-    await simulateBuy(price, 400); // montant d’achat
-    }
-
-    if (signal === "SELL" && inPosition) {
-        await simulateSell(price);
-    }
-
     await saveToDB(price, signal);
 }
 

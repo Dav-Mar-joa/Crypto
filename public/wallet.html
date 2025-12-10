@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Wallet</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <h1>Wallet</h1>
+
+  <div class="btc-info">
+    <a class="boutonGraphique" href="/index.html">Graphique</a>
+    <a class="boutonGraphique" href="/signals.html">Signals</a>
+  </div>
+
+  <p>💵 Total Investi : <span id="usdInvested">...</span> €</p>
+  <p>💰 Wallet actuel : <span id="walletValue">...</span> €</p>
+  <p>Value in BTC : <span id="btcValue"></span></p>
+
+  <!-- === GRAPHIC ZONE === -->
+  <h2>Évolution du Wallet (€)</h2>
+  <canvas id="walletChart"></canvas>
+
+  <script>
+    // =============================
+    //   CHARGEMENT WALLET ACTUEL
+    // =============================
+    async function loadWallet() {
+      const res = await fetch("/btc-wallet");
+      const data = await res.json();
+
+      const gain = data.usdt;
+      const btc = data.btc;
+      const usdInvested = data.totalInvested;
+
+      document.getElementById("walletValue").textContent = gain.toFixed(2);
+      document.getElementById("btcValue").textContent = btc.toFixed(6);
+      document.getElementById("usdInvested").textContent = usdInvested.toFixed(2) + " €";
+    }
+
+    loadWallet();
+    setInterval(loadWallet, 60000);
+
+
+    // =============================
+    //   GRAPH : HISTORIQUE WALLET
+    // =============================
+async function loadWalletHistory() {
+  const res = await fetch("/btc-wallet-history");
+  const data = await res.json();
+
+  console.log("Wallet history:", data);
+
+  const labels = data.map(item =>
+    new Date(item.timestamp).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" })
+  );
+
+  const values = data.map(item => item.usdt); // ici c'est ton profit net
+
+  const ctx = document.getElementById("walletChart").getContext("2d");
+
+  // Empêche de créer plusieurs graphiques
+  if (window.walletChart) {
+    window.walletChart.destroy();
+  }
+
+  window.walletChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Profit net (€)",
+        data: values,
+        borderWidth: 2,
+        borderColor: "green",
+        backgroundColor: "rgba(0,255,0,0.1)",
+        tension: 0.25
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: false }
+      }
+    }
+  });
+}
+
+loadWalletHistory();
+setInterval(loadWalletHistory, 60000);
+
+  </script>
+
+</body>
+</html>

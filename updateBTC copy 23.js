@@ -52,8 +52,7 @@ async function loadWallet() {
         totalInvested: 400,
         totalFeesPaid: 0,
         totalProfit: 0,
-        lastUpdate: new Date(),
-        history: [] 
+        lastUpdate: new Date()
     };
 
     await col.insertOne(newWallet);
@@ -77,15 +76,6 @@ async function simulateBuy(price, amountUSDT) {
     wallet.totalFeesPaid += feeBTC * price;
 
     wallet.lastUpdate = new Date();
-    if (!wallet.history) wallet.history = [];
-    wallet.history.push({
-    type: "BUY",
-    price,
-    amountUSDT,
-    btcBought: btcBought - feeBTC,
-    feePaid: feeBTC * price,
-    date: new Date()
-});
 
     await client.db(DB_NAME).collection("Wallet").updateOne(
         { type: "wallet" },
@@ -115,16 +105,6 @@ async function simulateSell(price) {
     wallet.btc = 0;
 
     wallet.lastUpdate = new Date();
-    if (!wallet.history) wallet.history = [];
-    wallet.history.push({
-    type: "SELL",
-    price,
-    usdtReceived: usdtReceived - feeUSDT,
-    btcSold: wallet.btc,
-    feePaid: feeUSDT,
-    date: new Date()
-});
-
 
     await client.db(DB_NAME).collection("Wallet").updateOne(
         { type: "wallet" },

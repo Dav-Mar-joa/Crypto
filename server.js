@@ -148,6 +148,81 @@ app.get('/btc-signals', async (req, res) => {
   }
 });
 
+// ======================
+// HISTORIQUE Du WALLET
+// ======================
+app.get('/btc-wallet', async (req, res) => {
+  try {
+    const col = db.collection("Wallet");  // ta collection Wallet
+
+    // On récupère LE wallet
+    const wallet = await col.findOne({ type: "wallet" });
+
+    if (!wallet) {
+      return res.status(404).json({ error: "Aucun wallet trouvé" });
+    } 
+
+    res.json(wallet);
+  } catch (err) {
+    console.error("Erreur /btc-wallet :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// ======================
+// HISTORIQUE DU WALLET (GRAPHIQUE)
+// ======================
+
+// app.get('/btc-wallet-history', async (req, res) => {
+//   try {
+//     const col = db.collection("Wallet");
+//     const wallet = await col.findOne({ type: "wallet" });
+
+//     if (!wallet || !Array.isArray(wallet.history)) return res.json([]);
+
+//     let balance = 0;
+//     const formatted = wallet.history.map(item => {
+//       if(item.type === "SELL") balance += item.usdtReceived;
+//       if(item.type === "BUY") balance -= item.amountUSDT;
+//       return {
+//         timestamp: new Date(item.date).getTime(),
+//         usdt: parseFloat(balance.toFixed(2)) // solde cumulé
+//       };
+//     });
+
+//     res.json(formatted);
+
+//   } catch (err) {
+//     console.error("Erreur /btc-wallet-history :", err);
+//     res.status(500).json({ error: "Erreur serveur" });
+//   }
+// });
+
+app.get('/btc-wallet-history', async (req, res) => {
+  try {
+    const col = db.collection("Wallet");
+    const wallet = await col.findOne({ type: "wallet" });
+
+    if (!wallet || !Array.isArray(wallet.history)) return res.json([]);
+
+    let profit = 0;
+    const formatted = wallet.history.map(item => {
+      if(item.type === "SELL") profit += item.usdtReceived - wallet.totalInvested; // gain net
+      if(item.type === "BUY") profit -= 0; // pas de perte à l'achat, seulement au SELL
+      return {
+        timestamp: new Date(item.date).getTime(),
+        usdt: parseFloat(profit.toFixed(2)) // profit net
+      };
+    });
+
+    res.json(formatted);
+
+  } catch (err) {
+    console.error("Erreur /btc-wallet-history :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 // ======================
 //  DEMARRAGE DU SERVEUR

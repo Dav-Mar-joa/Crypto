@@ -23,15 +23,15 @@ const COLLECTION_SIGNALS = "Signals";
 const COLLECTION_TRADES = "Trades";
 
 // ======== PARAMÈTRES =========
-const SEUIL = 0.0001 // % variation 
+const SEUIL = 0.01 // % variation 
 // const commisionPrice = 0.15; // frais de commission en $
-const feeRate = 0.000015; // 0.15%
+const feeRate = 0.00015; // 0.15%
 // ======== VARIABLES DE TENDANCE =========
 let lastPrice = null;
 let lastTrend = null;   // "up" ou "down"
 let lastBuy = null;
 let lastSell = null;
-let inPosition = false;
+let inPosition = null;
 
 // ========> VARIABLES POUR CALCUL PROFIT <========
 let variationProfit = null;
@@ -52,8 +52,7 @@ async function loadWallet() {
         totalInvested: 400,
         totalFeesPaid: 0,
         totalProfit: 0,
-        lastUpdate: new Date(),
-        history: [] 
+        lastUpdate: new Date()
     };
 
     await col.insertOne(newWallet);
@@ -77,15 +76,6 @@ async function simulateBuy(price, amountUSDT) {
     wallet.totalFeesPaid += feeBTC * price;
 
     wallet.lastUpdate = new Date();
-    if (!wallet.history) wallet.history = [];
-    wallet.history.push({
-    type: "BUY",
-    price,
-    amountUSDT,
-    btcBought: btcBought - feeBTC,
-    feePaid: feeBTC * price,
-    date: new Date()
-});
 
     await client.db(DB_NAME).collection("Wallet").updateOne(
         { type: "wallet" },
@@ -115,16 +105,6 @@ async function simulateSell(price) {
     wallet.btc = 0;
 
     wallet.lastUpdate = new Date();
-    if (!wallet.history) wallet.history = [];
-    wallet.history.push({
-    type: "SELL",
-    price,
-    usdtReceived: usdtReceived - feeUSDT,
-    btcSold: wallet.btc,
-    feePaid: feeUSDT,
-    date: new Date()
-});
-
 
     await client.db(DB_NAME).collection("Wallet").updateOne(
         { type: "wallet" },
@@ -252,7 +232,7 @@ function getSignal(price) {
             if (variation > SEUIL) {
                 signal = "BUY";
                 lastBuy = price
-                // inPosition = true;
+                inPosition = true;
             }    
         }
     }
@@ -274,7 +254,7 @@ function getSignal(price) {
             if (variation < -SEUIL && gainNet > 0) {
                 signal = "SELL";
                 lastSell = price
-                // inPosition = false;
+                inPosition = false;
                 console.log("------------------------------");
                 console.log("Variation pour SELL validé:", variation);
             console.log("prix achat et vente : gain", lastBuy, price , price-lastBuy);
@@ -374,15 +354,13 @@ async function loop() {
         "| Signal:", signal
     );
 
-    if (signal === "BUY" && !inPosition) {
-        await simulateBuy(price, 400); // montant d’achat
-        inPosition = true;
-    }
+    // if (signal === "BUY" && !inPosition) {
+    //     await simulateBuy(price, 400); // montant d’achat
+    // }
 
-    if (signal === "SELL" && inPosition) {
-        await simulateSell(price);
-        inPosition = false;
-    }
+    // if (signal === "SELL" && inPosition) {
+    //     await simulateSell(price);
+    // }
     await saveToDB(price, signal);
 }
 
@@ -390,6 +368,9 @@ async function loop() {
 // setInterval(loop, 60_000);
 // ========= DÉMARRAGE =========
 (async () => {
+    console.log("Connexion à MongoDB...");
+    await client.connect();
+    console.log("Connecté à MongoDB.");
     console.log("Chargement de l'état du bot...");
     await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
 
