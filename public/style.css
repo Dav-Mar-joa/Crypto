@@ -12,7 +12,6 @@ body {
 
 /* Titre façon tableau de bord financier */
 h1 {
-  font-size: 2.4rem;
   font-weight: 700;
   margin-bottom: 1rem;
   letter-spacing: 1px;
@@ -67,12 +66,12 @@ h1 {
 
 
 /* Graphique TradingView-like */
-#chart {
+/* #chart {
   width: 100%;
   max-width: 700px;
   height: 300px;
   margin-top: 20px;
-}
+} */
 
 /* Conteneur graphique */
 .container {
@@ -180,6 +179,7 @@ h1 {
   text-decoration: none;
   border-radius: 8px;
   font-size: 1rem;
+  cursor: pointer;
 }
 .boutonGraphique{
   display: inline-block;
@@ -190,7 +190,9 @@ h1 {
   text-decoration: none;
   border-radius: 8px;
   font-size: 1rem;
+  cursor: pointer;
 }
+
 
 table {
   width: 80%;
@@ -211,6 +213,19 @@ th {
 .profit-pos { color: #00ff9d; }
 .profit-neg { color: #ff4444; }
 
+#chart{
+  padding : 0.9rem 0.9rem 0.9rem 0.9rem;
+  width: 100%;
+  max-width: 850px;
+  height: 400px;
+  margin: 20px auto;
+  display: block;
+}
+
+.forced{
+  display:none
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   h1 {
@@ -223,9 +238,7 @@ th {
     width: 90%;
     padding: 20px;
   }
-   #chart {
-    height: 450px; /* plus grand sur mobile */
-  }
+
   table {
     font-size: 2rem;
   }

@@ -11,7 +11,7 @@ if (!url) {
 const client = new MongoClient(url);
 
 const DB_NAME = "Crypto";
-const COLLECTIONS = ["Bitcoin", "Signals", "Trades"];
+const COLLECTIONS = ["Bitcoin", "Signals", "Trades","Wallet","WalletHistory"];
 
 async function clearDB() {
   try {

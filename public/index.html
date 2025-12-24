@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://unpkg.com/regression@2.0.1/dist/regression.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="/manifest.json"/>
@@ -12,12 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
     <h1>Bitcoin (USD)</h1>
 
-    
-
-    <div class="btc-info">
       <p id="prix" class="btc-prix">Chargement...</p>
       <p id="variation" class="btc-variation"></p>
       <div class="buttons-wrapper">
@@ -46,15 +41,26 @@
       </div>
       <canvas id="chart"></canvas> 
       <p id="maj" class="btc-maj"></p>
-      <a class ="boutonHistorique" href="/trades.html">Trades</a>
+      <!-- <a class ="boutonHistorique" href="/trades.html">Trades</a> -->
+
+      <div class="btc-info">
       <a class = "boutonGraphique" href="/signals.html">Signals</a>
+      <!-- <a class = "boutonGraphique" href="/trades.html">Trades</a> -->
       <a class = "boutonGraphique" href="/wallet.html">Wallet</a>
     </div>
-  </div>
+    <button class="boutonGraphique" id="toggleForced">Forced Sell / Buy </button>
+    <div class="forced">  
+
+        <div class="btc-info">
+          <button class = "boutonGraphique" onclick="forceBuy()">Force BUY</button>
+          <button class = "boutonGraphique" onclick="forceSell()">Force SELL</button>
+        </div>
+    </div>
+
+
 
   <!-- Script principal -->
   <script src="script.js" type="module"></script>
-
 
   <script>
     // --- Enregistrement du Service Worker ---
@@ -68,6 +74,18 @@
             console.log('ServiceWorker registration failed: ', err);
           });
       });
+    }
+
+    async function forceBuy() {
+      const r = await fetch('/force-buy');
+      const d = await r.json();
+      console.log("FORCE BUY:", d);
+    }
+
+    async function forceSell() {
+      const r = await fetch('/force-sell');
+      const d = await r.json();
+      console.log("FORCE SELL:", d);
     }
 
     // --- Demande de permission pour les notifications ---

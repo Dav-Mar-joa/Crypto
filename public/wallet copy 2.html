@@ -23,7 +23,7 @@
 
   <!-- === GRAPHIC ZONE === -->
   <h2>Évolution du Wallet (€)</h2>
-  <canvas id="chart"></canvas>
+  <canvas id="walletChart"></canvas>
 
   <script>
     // =============================
@@ -44,11 +44,10 @@
       document.getElementById("usdInvested").textContent = usdInvested.toFixed(2)+ " €";
 
       const history = data.history;
-      console.log("HISTORY =", data.history);
 
       // labels = le temps
       const labels = history.map(h =>
-        new Date(h.date).toLocaleTimeString("fr-FR", {
+        new Date(h.timestamp).toLocaleTimeString("fr-FR", {
           hour: "2-digit",
           minute: "2-digit"
         })
@@ -64,17 +63,13 @@
         h.type === "SELL" ? h.usdtReceived : null
       );
 
-      const ctx = document.getElementById("chart").getContext("2d");
+      const ctx = document.getElementById("walletChart").getContext("2d");
 
-      // if (window.chart) {
-      //   window.chart.destroy();
-      // }
-
-      if (window.chart?.destroy) {
-        window.chart.destroy();
+      if (window.walletChart) {
+        window.walletChart.destroy();
       }
 
-      window.chart = new Chart(ctx, {
+      window.walletChart = new Chart(ctx, {
         type: "line",
         data: {
           labels,
@@ -86,13 +81,7 @@
               borderColor: "green",
               backgroundColor: "rgba(0,200,0,0.15)",
               tension: 0.25,
-              spanGaps: true,
-
-              pointRadius: buyAmounts.map(v => v ? 6 : 0),
-              pointHoverRadius: buyAmounts.map(v => v ? 8 : 0),
-              pointBackgroundColor: "green",
-              pointBorderColor: "green",
-              pointBorderWidth: 2
+              spanGaps: false
             },
             {
               label: "SELL – USDT Received",
@@ -101,12 +90,7 @@
               borderColor: "red",
               backgroundColor: "rgba(255,0,0,0.15)",
               tension: 0.25,
-              spanGaps: true,
-              pointRadius: sellAmounts.map(v => v ? 6 : 0),
-              pointHoverRadius: sellAmounts.map(v => v ? 8 : 0),
-              pointBackgroundColor: "red",
-              pointBorderColor: "red",  
-              pointBorderWidth: 2
+              spanGaps: false
             }
           ]
         },
@@ -156,14 +140,14 @@
 
 //   const values = data.map(item => item.usdt); // ici c'est ton profit net
 
-//   const ctx = document.getElementById("chart").getContext("2d");
+//   const ctx = document.getElementById("walletChart").getContext("2d");
 
 //   // Empêche de créer plusieurs graphiques
-//   if (window.chart) {
-//     window.chart.destroy();
+//   if (window.walletChart) {
+//     window.walletChart.destroy();
 //   }
 
-//   window.chart = new Chart(ctx, {
+//   window.walletChart = new Chart(ctx, {
 //     type: "line",
 //     data: {
 //       labels: labels,

@@ -400,21 +400,6 @@ async function loadLastState() {
 //     await saveToDB(price, signal);
 // }
 
-async function saveWalletSnapshot(price) {
-  const wallet = await loadWallet();
-
-  await client.db(DB_NAME).collection("WalletHistory").insertOne({
-    timestamp: Date.now(),
-    usdt: wallet.usdt,
-    btc: wallet.btc,
-    btcPrice: price,
-    totalValue: wallet.usdt + wallet.btc * price,
-    amountInvested: 400,
-
-  });
-}
-
-
 async function loop() {
     const price = await getPrice();
     if (!price) return;
@@ -433,22 +418,14 @@ async function loop() {
         "| inPosition:", inPosition
     );
 
-    // if (signal === "BUY" && !inPosition) {
-    //     await simulateBuy(price, 400);
-    //     inPosition = true;
-    // }
-
     if (signal === "BUY" && !inPosition) {
-        const wallet = await loadWallet();
-        await simulateBuy(price, wallet.usdt);
+        await simulateBuy(price, 400);
         inPosition = true;
-        await saveWalletSnapshot(price);
     }
 
     if (signal === "SELL" && inPosition) {
         await simulateSell(price);
         inPosition = false;
-        await saveWalletSnapshot(price);
     }
     await saveToDB(price, signal);
 }

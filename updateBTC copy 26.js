@@ -32,7 +32,6 @@ let lastTrend = null;   // "up" ou "down"
 let lastBuy = null;
 let lastSell = null;
 let inPosition = false;
-let lastTradeForced = null;
 
 // ========> VARIABLES POUR CALCUL PROFIT <========
 let variationProfit = null;
@@ -256,16 +255,6 @@ function getSignal(price) {
                 // inPosition = true;
             }    
         }
-        // // Achat après un SELL forcé si cours continue à monter
-        // if (!inPosition) {
-        //     const variationFromLastSell = lastSell ? (price - lastSell) / lastSell : (price - lastLow) / lastLow;
-        //     if (variationFromLastSell > SEUIL) {
-        //         signal = "BUY";
-        //         lastBuy = price;
-        //         inPosition = true;
-        //     }
-        // }
-        
     }
 
     // === CAS BAISSE
@@ -336,8 +325,7 @@ async function saveToDB(price, signal) {
             variationProfit,
             profit,
             date: new Date(),
-	        inPosition,
-            lastTradeForced
+	    inPosition
            
         });
 
@@ -359,7 +347,6 @@ async function loadLastState() {
     lastBuy = lastSignal[0].lastBuy;
     lastSell = lastSignal[0].lastSell;
     inPosition = lastSignal[0].inPosition || false;
-    lastTradeForced = lastSignal[0].lastTradeForced || false;
   }
   console.log("État restauré :", {
         lastBuy,
@@ -367,61 +354,16 @@ async function loadLastState() {
         inPosition,
         lastLow,
         lastHigh,
-        lastTrend,
-        lastTradeForced
+        lastTrend
     });
 }
 
 
-// // ======== LOOP =========
-// async function loop() {
-// // async function updateBitcoinPrice() {
-//     const price = await getPrice();
-//     if (!price) return;
-
-//     const signal = getSignal(price);
-
-//     console.log(
-//         new Date().toLocaleTimeString("fr-FR", { hour12: false }),
-//         "| Price:", price,
-//         "| Trend:", lastTrend,
-//         "| Signal:", signal
-//     );
-
-//     if (signal === "BUY" && !inPosition) {
-//         await simulateBuy(price, 400); // montant d’achat
-//         inPosition = true;
-//     }
-
-//     if (signal === "SELL" && inPosition) {
-//         await simulateSell(price);
-//         inPosition = false;
-//     }
-//     await saveToDB(price, signal);
-// }
-
-async function saveWalletSnapshot(price) {
-  const wallet = await loadWallet();
-
-  await client.db(DB_NAME).collection("WalletHistory").insertOne({
-    timestamp: Date.now(),
-    usdt: wallet.usdt,
-    btc: wallet.btc,
-    btcPrice: price,
-    totalValue: wallet.usdt + wallet.btc * price,
-    amountInvested: 400,
-
-  });
-}
-
-
+// ======== LOOP =========
 async function loop() {
+// async function updateBitcoinPrice() {
     const price = await getPrice();
     if (!price) return;
-
-    // ⚡ Synchronisation inPosition depuis le wallet
-    const wallet = await loadWallet();
-    inPosition = wallet.btc > 0;
 
     const signal = getSignal(price);
 
@@ -429,37 +371,20 @@ async function loop() {
         new Date().toLocaleTimeString("fr-FR", { hour12: false }),
         "| Price:", price,
         "| Trend:", lastTrend,
-        "| Signal:", signal,
-        "| inPosition:", inPosition
+        "| Signal:", signal
     );
 
-    // if (signal === "BUY" && !inPosition) {
-    //     await simulateBuy(price, 400);
-    //     inPosition = true;
-    // }
-
     if (signal === "BUY" && !inPosition) {
-        const wallet = await loadWallet();
-        await simulateBuy(price, wallet.usdt);
+        await simulateBuy(price, 400); // montant d’achat
         inPosition = true;
-        await saveWalletSnapshot(price);
     }
 
     if (signal === "SELL" && inPosition) {
         await simulateSell(price);
         inPosition = false;
-        await saveWalletSnapshot(price);
     }
     await saveToDB(price, signal);
 }
-
-
-module.exports = {
-  simulateBuy,
-  simulateSell,
-  getPrice,
-  getState: () => ({ lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition })
-};
 
 // lance toutes les 60 secondes
 // setInterval(loop, 60_000);

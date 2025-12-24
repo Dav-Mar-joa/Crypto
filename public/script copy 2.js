@@ -123,27 +123,6 @@ function calculateTrendSignalSmoothed(currentSmooth) {
   return signal;
 }
 
-// function toggle(){
-//   const forcedDiv = document.querySelector('.forced');
-//   // bascule l'affichage
-//   if (forcedDiv.style.display === 'none' || forcedDiv.style.display === '') {
-//     forcedDiv.style.display = 'block';
-//   } else {
-//     forcedDiv.style.display = 'none';
-//   }
-
-// }
-
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("toggleForced");
-  const forcedDiv = document.querySelector(".forced");
-
-  btn.addEventListener("click", () => {
-    forcedDiv.style.display =
-      forcedDiv.style.display === "block" ? "none" : "block";
-  });
-});
-
 // ======================
 // UTIL: applique l'état des checkboxes aux datasets
 // ======================
@@ -234,15 +213,7 @@ function initChart() {
           borderColor: "#00ff95",
           backgroundColor: "rgba(0,255,149,0.08)",
           tension: 0.25,
-          spanGaps: true,
-
-          // 🔵 POINTS VISIBLES ET GROS
-          pointRadius: 1,
-          pointHoverRadius: 1,
-          pointBackgroundColor: "#00ff95",
-          pointBorderColor: "#00ff95",
-          pointBorderWidth: 2,
-
+          pointRadius: 0,
           yAxisID: 'y'
         },
         {
@@ -252,31 +223,17 @@ function initChart() {
           borderColor: "#ff6a00",
           backgroundColor: "rgba(255,106,0,0.08)",
           tension: 0.25,
-          spanGaps: true,
-
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: "#ff6a00",
-          pointBorderColor: "#ff6a00",
-          pointBorderWidth: 2,
-
+          pointRadius: 0,
           yAxisID: 'y1'
         },
         {
           label: "Price smoothed",
           data: smoothed,
           borderWidth: 2,
-          borderColor: "#f81f1f",
+          borderColor: "#f81f1fff",
           backgroundColor: "rgba(255,255,255,0.05)",
           tension: 0.25,
-          spanGaps: true,
-
-          pointRadius: 1,
-          pointHoverRadius: 2,
-          pointBackgroundColor: "#f81f1f",
-          pointBorderColor: "#f81f1f",
-          pointBorderWidth: 1,
-
+          pointRadius: 0,
           yAxisID: 'y',
           hidden: true
         }

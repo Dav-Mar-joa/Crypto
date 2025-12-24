@@ -208,30 +208,30 @@ app.get('/btc-wallet', async (req, res) => {
 //   }
 // });
 
-// app.get('/btc-wallet-history', async (req, res) => {
-//   try {
-//     const col = db.collection("Wallet");
-//     const wallet = await col.findOne({ type: "wallet" });
+app.get('/btc-wallet-history', async (req, res) => {
+  try {
+    const col = db.collection("Wallet");
+    const wallet = await col.findOne({ type: "wallet" });
 
-//     if (!wallet || !Array.isArray(wallet.history)) return res.json([]);
+    if (!wallet || !Array.isArray(wallet.history)) return res.json([]);
 
-//     let profit = 0;
-//     const formatted = wallet.history.map(item => {
-//       if(item.type === "SELL") profit += item.usdtReceived - wallet.totalInvested; // gain net
-//       if(item.type === "BUY") profit -= 0; // pas de perte à l'achat, seulement au SELL
-//       return {
-//         timestamp: new Date(item.date).getTime(),
-//         usdt: parseFloat(profit.toFixed(2)) // profit net
-//       };
-//     });
+    let profit = 0;
+    const formatted = wallet.history.map(item => {
+      if(item.type === "SELL") profit += item.usdtReceived - wallet.totalInvested; // gain net
+      if(item.type === "BUY") profit -= 0; // pas de perte à l'achat, seulement au SELL
+      return {
+        timestamp: new Date(item.date).getTime(),
+        usdt: parseFloat(profit.toFixed(2)) // profit net
+      };
+    });
 
-//     res.json(formatted);
+    res.json(formatted);
 
-//   } catch (err) {
-//     console.error("Erreur /btc-wallet-history :", err);
-//     res.status(500).json({ error: "Erreur serveur" });
-//   }
-// });
+  } catch (err) {
+    console.error("Erreur /btc-wallet-history :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 
 // ======================
 //  IMPORT DES FONCTIONS DE TRADING
@@ -470,17 +470,6 @@ let { lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition } = getState()
 //     res.status(500).json({ error: "Erreur force-sell" });
 //   }
 // });
-
-app.get("/btc-wallet-history", async (req, res) => {
-  const data = await db
-    .collection("WalletHistory")
-    .find()
-    .sort({ timestamp: 1 })
-    .toArray();
-
-  res.json(data);
-});
-
 
 app.get("/force-sell", async (req, res) => {
   try {
