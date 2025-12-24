@@ -464,43 +464,43 @@ module.exports = {
 // lance toutes les 60 secondes
 // setInterval(loop, 60_000);
 // ========= DÉMARRAGE =========
-(async () => {
-    console.log("Chargement de l'état du bot...");
-    await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
+// (async () => {
+//     console.log("Chargement de l'état du bot...");
+//     await loadLastState();   // ⬅️ IMPORTANT : retrouver position + low/high + tendance
 
-    console.log("Lancement de la première analyse...");
-    await loop();            // ⬅️ Première exécution non différée
+//     console.log("Lancement de la première analyse...");
+//     await loop();            // ⬅️ Première exécution non différée
 
-    console.log("Démarrage de la boucle toutes les 60 secondes...");
-    //  process.exit(0);
-    setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
-})();
+//     console.log("Démarrage de la boucle toutes les 60 secondes...");
+//     //  process.exit(0);
+//     setInterval(loop, 60_000);   // ⬅️ Pour toi si tu restes sur setInterval
+// })();
 
 
 
-// // ======================
-// // Si exécuté directement (cron)
-// // ======================
+// ======================
+// Si exécuté directement (cron)
+// ======================
 
-// async function updateBitcoinPrice() {
-//     await loadLastState();
-//     await loop();
-// }
+async function updateBitcoinPrice() {
+    await loadLastState();
+    await loop();
+}
 
-// if (require.main === module) {
-//   (async () => {
-//     await updateBitcoinPrice();
-//     process.exit(0);
-//   })();
-// }
+if (require.main === module) {
+  (async () => {
+    await updateBitcoinPrice();
+    process.exit(0);
+  })();
+}
 
-// // =========================
-// // EXPORT pour server.js
-// // =========================
+// =========================
+// EXPORT pour server.js
+// =========================
 
-// module.exports = { updateBitcoinPrice };
+module.exports = { updateBitcoinPrice };
 
-// // ======================
-// // Si exécuté directement (cron)
-// // ======================
+// ======================
+// Si exécuté directement (cron)
+// ======================
 
