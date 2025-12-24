@@ -458,6 +458,7 @@ module.exports = {
   simulateBuy,
   simulateSell,
   getPrice,
+  updateBitcoinPrice,
   getState: () => ({ lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition })
 };
 
@@ -498,7 +499,8 @@ if (require.main === module) {
 // EXPORT pour server.js
 // =========================
 
-module.exports = { updateBitcoinPrice };
+// module.exports = { updateBitcoinPrice };
+
 
 // ======================
 // Si exécuté directement (cron)
