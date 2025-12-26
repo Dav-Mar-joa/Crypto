@@ -33,6 +33,7 @@ let lastBuy = null;
 let lastSell = null;
 let inPosition = false;
 let lastTradeForced = null;
+let canForceTrade = false;
 
 // ========> VARIABLES POUR CALCUL PROFIT <========
 let variationProfit = null;
@@ -173,10 +174,14 @@ async function getPrice() {
         );
 
         const price = r.data.bitcoin.usd;
+        canForceTrade = true;
 
         return parseFloat(price);
     } catch (err) {
         console.error("Erreur API CoinGecko :", err.message);
+        if(err.response.satus === 429) {
+            canForceTrade = false;
+        }
         return null;
     }
 }
@@ -459,7 +464,7 @@ module.exports = {
   simulateSell,
   getPrice,
   updateBitcoinPrice,
-  getState: () => ({ lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition })
+  getState: () => ({ lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition, lastTradeForced, canForceTrade }),
 };
 
 // lance toutes les 60 secondes

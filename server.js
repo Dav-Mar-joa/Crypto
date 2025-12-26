@@ -66,8 +66,14 @@ app.get('/btc-price', async (req, res) => {
       variation = ((cachedPrice - lastTwo[1].price) / lastTwo[1].price * 100).toFixed(2);
     }
     // console.log("Prix servi :", cachedPrice, "Variation :", variation, "Date :", lastUpdate);
+    
+    console.log("****************************************")
+    console.log("****************************************")
+    console.log("btc-price canForceTrade:", canForceTrade);
+    console.log("****************************************")
+    console.log("****************************************")
 
-    res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume });
+    res.json({ price: cachedPrice, updatedAt: lastUpdate, variation,marketCap: lastTwo[0].marketCap, volume: lastTwo[0].volume,canForceTrade });
 
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur /btc-price" });
@@ -243,7 +249,7 @@ app.get('/btc-wallet', async (req, res) => {
 // } = require('./updateBTC.js');   // Assure-toi que c'est bien exporté
 
 const { simulateBuy, simulateSell, getPrice, getState } = require('./updateBTC.js');
-let { lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition } = getState();
+let { lastBuy, lastSell, lastTrend, lastLow, lastHigh, inPosition, lastTradeForced, canForceTrade } = getState();
 
 
 // app.get("/force-buy", async (req, res) => {
@@ -488,7 +494,12 @@ app.get("/force-sell", async (req, res) => {
     if (!price) {
       return res.status(500).json({ error: "Prix indisponible" });
     }
-
+    if (!canForceTrade) {
+      return res.status(400).json({
+        status: "ignored",
+        reason: "Forçage désactivé actuellement"
+      });
+    }
     const wallet = await loadWallet();
 
     if (!wallet.history || wallet.history.length === 0) {
@@ -581,6 +592,12 @@ app.get("/force-buy", async (req, res) => {
     if (!price) {
       return res.status(500).json({ error: "Prix indisponible" });
     }
+    if (!canForceTrade) {
+      return res.status(400).json({
+        status: "ignored",
+        reason: "Forçage désactivé actuellement"
+      });
+    }
 
     const wallet = await loadWallet();
 
@@ -645,6 +662,7 @@ app.get("/force-buy", async (req, res) => {
       action: "BUY",
       price,
       btcBought,
+      canForceTrade,
       wallet: {
         btc: wallet.btc,
         usdt: wallet.usdt
