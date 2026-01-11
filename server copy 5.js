@@ -173,7 +173,6 @@ app.get('/btc-wallet', async (req, res) => {
 
     // On récupère LE wallet
     const wallet = await col.findOne({ type: "wallet" });
-    console.log("wallet : ",wallet)
 
     if (!wallet) {
       return res.status(404).json({ error: "Aucun wallet trouvé" });
@@ -560,7 +559,7 @@ app.get("/force-sell", async (req, res) => {
     await db.collection("Signals").insertOne({
       signal: "SELL",
       price,
-      lastBuy: lastEntry.price,
+      lastBuyPrice: lastEntry.price,
       btcSold: btcToSell,
       profit,
       variationProfit,
